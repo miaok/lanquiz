@@ -1,0 +1,191 @@
+import 'dart:async';
+import '../models/quiz_room.dart';
+import '../models/player.dart';
+
+/// 知识竞答游戏控制器
+class QuizGameController {
+  QuizRoom room;
+  final StreamController<QuizRoom> _roomUpdateController =
+      StreamController.broadcast();
+
+  Stream<QuizRoom> get roomUpdates => _roomUpdateController.stream;
+
+  QuizGameController(this.room);
+
+  /// 添加玩家
+  bool addPlayer(QuizPlayer player) {
+    if (room.isFull) return false;
+    if (room.players.any((p) => p.id == player.id)) return false;
+
+    room = room.copyWith(players: [...room.players, player]);
+    _notifyUpdate();
+    return true;
+  }
+
+  /// 移除玩家
+  void removePlayer(String playerId) {
+    final updatedPlayers = List<QuizPlayer>.from(room.players);
+    updatedPlayers.removeWhere((p) => p.id == playerId);
+    room = room.copyWith(players: updatedPlayers);
+    _notifyUpdate();
+  }
+
+  /// 玩家准备
+  void playerReady(String playerId, bool isReady) {
+    final player = room.players.firstWhere((p) => p.id == playerId);
+    final index = room.players.indexOf(player);
+    final updatedPlayers = List<QuizPlayer>.from(room.players);
+    updatedPlayers[index] = player.copyWith(isReady: isReady);
+    room = room.copyWith(players: updatedPlayers);
+    _notifyUpdate();
+  }
+
+  /// 开始游戏
+  bool startGame() {
+    if (!room.allPlayersReady) return false;
+    if (room.questions.isEmpty) return false;
+
+    List<QuizPlayer> updatedPlayers = [];
+    for (int i = 0; i < room.players.length; i++) {
+      updatedPlayers.add(
+        room.players[i].copyWith(
+          answerTime: 0,
+          forceNullCurrentAnswer: true,
+          currentQuestionIndex: 0,
+          isFinished: false,
+          comboCount: 0,
+          lastAnswerResult: AnswerResult.none,
+        ),
+      );
+    }
+
+    room = room.copyWith(
+      status: RoomStatus.playing,
+      currentQuestionIndex: 0,
+      questionStartTime: DateTime.now(),
+      players: updatedPlayers,
+    );
+
+    _notifyUpdate();
+    return true;
+  }
+
+  /// 玩家提交答案（完全独立模式：每个玩家独立进度）
+  void submitAnswer(String playerId, dynamic answerIndex) {
+    if (room.status != RoomStatus.playing) return;
+
+    final player = room.players.firstWhere((p) => p.id == playerId);
+    final index = room.players.indexOf(player);
+
+    // 获取玩家当前的题目
+    final question = room.questions[player.currentQuestionIndex];
+    final answerTime = DateTime.now()
+        .difference(room.questionStartTime!)
+        .inMilliseconds;
+
+    // 使用题目的判题方法
+    final isCorrect = question.isAnswerCorrect(answerIndex);
+
+    // 立即计算分数
+    int newScore = player.score;
+    int newComboCount = player.comboCount;
+    AnswerResult answerResult;
+
+    if (isCorrect) {
+      final baseScore = question.points;
+      final timeBonus = (10000 - answerTime) ~/ 1000; // 时间奖励
+      final totalScore = baseScore + (timeBonus > 0 ? timeBonus : 0);
+      newScore = player.score + totalScore;
+      newComboCount = player.comboCount + 1; // 连击数+1
+      answerResult = AnswerResult.correct;
+      print(
+        '玩家 ${player.name} 答对了!基础分: $baseScore, 时间奖励: $timeBonus, 连击: $newComboCount, 新总分: $newScore',
+      );
+    } else {
+      newComboCount = 0; // 答错重置连击数
+      answerResult = AnswerResult.incorrect;
+      print('玩家 ${player.name} 答错了,连击中断');
+    }
+
+    // 判断是否是最后一题
+    final isLastQuestion =
+        player.currentQuestionIndex >= room.questions.length - 1;
+
+    final updatedPlayers = List<QuizPlayer>.from(room.players);
+    updatedPlayers[index] = player.copyWith(
+      currentAnswer: answerIndex,
+      answerTime: answerTime,
+      score: newScore,
+      comboCount: newComboCount,
+      lastAnswerResult: answerResult,
+      // 如果不是最后一题，自动进入下一题
+      currentQuestionIndex: isLastQuestion
+          ? player.currentQuestionIndex
+          : player.currentQuestionIndex + 1,
+      isFinished: isLastQuestion,
+      // 如果不是最后一题，清空当前答案以便显示下一题
+      forceNullCurrentAnswer: !isLastQuestion,
+    );
+    room = room.copyWith(players: updatedPlayers);
+
+    _notifyUpdate();
+
+    // 检查是否所有人都完成了所有题目
+    if (room.allPlayersFinished) {
+      print('所有玩家都已完成所有题目，游戏结束');
+      room = room.copyWith(status: RoomStatus.finished);
+      _notifyUpdate();
+    }
+  }
+
+  /// 重新开始游戏
+  void restartGame() {
+    List<QuizPlayer> updatedPlayers = [];
+    for (int i = 0; i < room.players.length; i++) {
+      updatedPlayers.add(
+        room.players[i].copyWith(
+          score: 0,
+          isReady: false,
+          answerTime: 0,
+          forceNullCurrentAnswer: true,
+          currentQuestionIndex: 0,
+          isFinished: false,
+          comboCount: 0,
+          lastAnswerResult: AnswerResult.none,
+        ),
+      );
+    }
+
+    room = room.copyWith(
+      status: RoomStatus.waiting,
+      currentQuestionIndex: 0,
+      questionStartTime: null,
+      players: updatedPlayers,
+    );
+
+    _notifyUpdate();
+  }
+
+  /// 获取排行榜
+  List<QuizPlayer> getLeaderboard() {
+    final sortedPlayers = List<QuizPlayer>.from(room.players);
+    sortedPlayers.sort((a, b) => b.score.compareTo(a.score));
+    return sortedPlayers;
+  }
+
+  void _notifyUpdate() {
+    print('GameController._notifyUpdate() - 触发房间更新通知');
+    if (!_roomUpdateController.isClosed) {
+      _roomUpdateController.add(room);
+      print('房间更新通知已发送到stream');
+    } else {
+      print('警告：StreamController已关闭，无法发送更新');
+    }
+  }
+
+  void dispose() {
+    if (!_roomUpdateController.isClosed) {
+      _roomUpdateController.close();
+    }
+  }
+}
