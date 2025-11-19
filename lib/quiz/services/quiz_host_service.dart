@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import '../models/quiz_room.dart';
 import '../models/player.dart';
-import '../data/sample_questions.dart';
+import '../data/question_repository.dart';
 import 'quiz_network_service.dart';
 import 'quiz_game_controller.dart';
 
@@ -17,6 +17,10 @@ class QuizHostService {
   Timer? _beacon;
   final List<Socket> _clients = [];
   final Map<Socket, String> _clientPlayerIds = {}; // Socket到玩家ID的映射
+
+  final StreamController<String> _clientDisconnectController =
+      StreamController.broadcast();
+  Stream<String> get onClientDisconnected => _clientDisconnectController.stream;
 
   String? _hostIp;
 
@@ -117,6 +121,11 @@ class QuizHostService {
   void _removeClient(Socket client) {
     final playerId = _clientPlayerIds[client];
     if (playerId != null) {
+      final player = gameController.room.players.firstWhere(
+        (p) => p.id == playerId,
+        orElse: () => QuizPlayer(id: '', name: 'Unknown'),
+      );
+      _clientDisconnectController.add(player.name);
       gameController.removePlayer(playerId);
       _clientPlayerIds.remove(client);
     }
@@ -147,7 +156,7 @@ class QuizHostService {
 
   /// 重新开始游戏（生成新题目）
   void restartGame() {
-    final newQuestions = SampleQuestions.getRandomQuestions(3);
+    final newQuestions = QuestionRepository.getRandomQuestions(3);
     gameController.restartGame(newQuestions);
     print('游戏已重置，新题目已生成');
   }
@@ -173,6 +182,10 @@ class QuizHostService {
     }
     _clients.clear();
     _clientPlayerIds.clear();
+
+    if (!_clientDisconnectController.isClosed) {
+      _clientDisconnectController.close();
+    }
 
     // 最后关闭服务器
     _server?.close();

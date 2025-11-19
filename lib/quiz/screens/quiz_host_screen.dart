@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/quiz_room.dart';
 import '../models/player.dart';
 import '../services/quiz_host_service.dart';
-import '../data/sample_questions.dart';
+import '../data/question_repository.dart';
 import 'quiz_game_screen.dart';
 
 /// 房主页面
@@ -28,9 +28,9 @@ class _QuizHostScreenState extends State<QuizHostScreen> {
   StreamSubscription<QuizRoom>? _roomUpdateSubscription;
 
   // 题型数量设置
-  int _trueFalseCount = 1; // 判断题数量，默认1道
-  int _singleChoiceCount = 1; // 单选题数量，默认1道
-  int _multipleChoiceCount = 1; // 多选题数量，默认1道
+  int _trueFalseCount = 10; // 判断题数量，默认1道
+  int _singleChoiceCount = 10; // 单选题数量，默认1道
+  int _multipleChoiceCount = 10; // 多选题数量，默认1道
 
   @override
   void initState() {
@@ -55,7 +55,7 @@ class _QuizHostScreenState extends State<QuizHostScreen> {
       name: '${widget.playerName}的房间',
       hostId: 'host',
       maxPlayers: 2,
-      questions: SampleQuestions.getQuestionsByConfig(
+      questions: QuestionRepository.getQuestionsByConfig(
         trueFalseCount: _trueFalseCount,
         singleChoiceCount: _singleChoiceCount,
         multipleChoiceCount: _multipleChoiceCount,
@@ -98,6 +98,18 @@ class _QuizHostScreenState extends State<QuizHostScreen> {
         setState(() {
           _room = updatedRoom;
         });
+      }
+    });
+
+    // 监听客户端断开连接
+    _hostService.onClientDisconnected.listen((playerName) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('玩家 $playerName 已断开连接'),
+            backgroundColor: Colors.orange,
+          ),
+        );
       }
     });
   }
@@ -338,7 +350,7 @@ class _QuizHostScreenState extends State<QuizHostScreen> {
   void _updateRoomQuestions() {
     if (_room == null || !_isInitialized) return;
 
-    final newQuestions = SampleQuestions.getQuestionsByConfig(
+    final newQuestions = QuestionRepository.getQuestionsByConfig(
       trueFalseCount: _trueFalseCount,
       singleChoiceCount: _singleChoiceCount,
       multipleChoiceCount: _multipleChoiceCount,
@@ -380,7 +392,7 @@ class _QuizHostScreenState extends State<QuizHostScreen> {
             child: Slider(
               value: count.toDouble(),
               min: 0,
-              max: 10,
+              max: 100,
               divisions: 10,
               activeColor: color,
               inactiveColor: color.withValues(alpha: 0.3),

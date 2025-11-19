@@ -102,6 +102,16 @@ class _QuizClientScreenState extends State<QuizClientScreen> {
         });
       }
     });
+
+    // 监听断开连接
+    _clientService.onDisconnected.listen((_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('与主机断开连接'), backgroundColor: Colors.red),
+        );
+        Navigator.popUntil(context, (route) => route.isFirst);
+      }
+    });
   }
 
   @override

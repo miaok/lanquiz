@@ -21,6 +21,10 @@ class QuizClientService {
   Stream<QuizRoom> get roomUpdates => _roomUpdateController.stream;
   Stream<String> get statusUpdates => _statusController.stream;
 
+  final StreamController<void> _disconnectController =
+      StreamController.broadcast();
+  Stream<void> get onDisconnected => _disconnectController.stream;
+
   QuizRoom? currentRoom;
   String? myPlayerId;
 
@@ -58,8 +62,14 @@ class QuizClientService {
           .socketLines(_tcp!)
           .listen(
             _handleServerMessage,
-            onDone: () => _updateStatus('已断开连接'),
-            onError: (error) => _updateStatus('连接错误: $error'),
+            onDone: () {
+              _updateStatus('已断开连接');
+              _disconnectController.add(null);
+            },
+            onError: (error) {
+              _updateStatus('连接错误: $error');
+              _disconnectController.add(null);
+            },
           );
 
       _updateStatus('已连接');
@@ -208,6 +218,9 @@ class QuizClientService {
     }
     if (!_statusController.isClosed) {
       _statusController.close();
+    }
+    if (!_disconnectController.isClosed) {
+      _disconnectController.close();
     }
 
     print('客户端服务已关闭');

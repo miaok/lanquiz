@@ -34,6 +34,7 @@ class _QuizGameScreenState extends State<QuizGameScreen> {
   int? _selectedAnswer; // 单选题/判断题的选择
   final List<int> _selectedAnswers = []; // 多选题的选择
   StreamSubscription<QuizRoom>? _roomSubscription;
+  StreamSubscription? _disconnectSubscription;
 
   // 反馈弹窗状态
   bool _showFeedback = false;
@@ -77,6 +78,36 @@ class _QuizGameScreenState extends State<QuizGameScreen> {
         }
       });
     }
+
+    // 监听断开连接事件
+    if (widget.isHost) {
+      _disconnectSubscription = widget.hostService!.onClientDisconnected.listen(
+        (playerName) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('玩家 $playerName 已断开连接'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
+        },
+      );
+    } else {
+      _disconnectSubscription = widget.clientService!.onDisconnected.listen((
+        _,
+      ) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('与主机断开连接'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          Navigator.popUntil(context, (route) => route.isFirst);
+        }
+      });
+    }
   }
 
   void _checkForQuestionChange(QuizRoom newRoom) {
@@ -101,6 +132,7 @@ class _QuizGameScreenState extends State<QuizGameScreen> {
   @override
   void dispose() {
     _roomSubscription?.cancel();
+    _disconnectSubscription?.cancel();
 
     // 注意：不要在这里关闭服务，因为服务需要传递给结果页面以便“再来一局”
     // 服务将在 QuizResultScreen 中点击“返回主页”时关闭
