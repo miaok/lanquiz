@@ -184,7 +184,10 @@ class _QuizGameScreenState extends State<QuizGameScreen> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           // 题目
-                          QuestionCard(questionText: question.question),
+                          QuestionCard(
+                            questionText: question.question,
+                            questionType: question.type,
+                          ),
                           const SizedBox(height: 16),
 
                           // 选项

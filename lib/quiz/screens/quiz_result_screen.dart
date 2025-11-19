@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:lanquizgame/quiz/models/question.dart';
 import '../models/quiz_room.dart';
 import '../models/player.dart';
 import '../services/quiz_host_service.dart';
@@ -382,9 +383,35 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            question.question,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          Row(
+            children: [
+              // 题型标签
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: _getTypeColor(question.type),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  question.type.label,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  question.question,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           Row(
@@ -419,6 +446,17 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
         ],
       ),
     );
+  }
+
+  Color _getTypeColor(QuestionType type) {
+    switch (type) {
+      case QuestionType.singleChoice:
+        return Colors.blue;
+      case QuestionType.trueFalse:
+        return Colors.orange;
+      case QuestionType.multipleChoice:
+        return Colors.purple;
+    }
   }
 
   String _formatAnswer(dynamic question, dynamic answer) {

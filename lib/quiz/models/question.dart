@@ -2,7 +2,18 @@
 enum QuestionType {
   singleChoice, // 单选题
   trueFalse, // 判断题
-  multipleChoice, // 多选题
+  multipleChoice; // 多选题
+
+  String get label {
+    switch (this) {
+      case QuestionType.singleChoice:
+        return '单选题';
+      case QuestionType.trueFalse:
+        return '判断题';
+      case QuestionType.multipleChoice:
+        return '多选题';
+    }
+  }
 }
 
 /// 题目模型

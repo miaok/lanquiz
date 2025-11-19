@@ -94,14 +94,13 @@ class QuizGameController {
     AnswerResult answerResult;
 
     if (isCorrect) {
-      final baseScore = question.points;
-      final timeBonus = (10000 - answerTime) ~/ 1000; // 时间奖励
-      final totalScore = baseScore + (timeBonus > 0 ? timeBonus : 0);
+      final baseScore = (100 / room.questions.length).round(); // 每题默认分数
+      final totalScore = baseScore; // 取消时间奖励
       newScore = player.score + totalScore;
       newComboCount = player.comboCount + 1; // 连击数+1
       answerResult = AnswerResult.correct;
       print(
-        '玩家 ${player.name} 答对了!基础分: $baseScore, 时间奖励: $timeBonus, 连击: $newComboCount, 新总分: $newScore',
+        '玩家 ${player.name} 答对了!基础分: $baseScore, 连击: $newComboCount, 新总分: $newScore',
       );
     } else {
       newComboCount = 0; // 答错重置连击数
@@ -151,6 +150,16 @@ class QuizGameController {
       room = room.copyWith(status: RoomStatus.finished);
       _notifyUpdate();
     }
+  }
+
+  /// 更新题目列表（仅在等待阶段允许）
+  bool updateQuestions(List<Question> newQuestions) {
+    if (room.status != RoomStatus.waiting) return false;
+    if (newQuestions.isEmpty) return false;
+
+    room = room.copyWith(questions: newQuestions);
+    _notifyUpdate();
+    return true;
   }
 
   /// 重新开始游戏

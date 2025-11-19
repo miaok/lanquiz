@@ -246,12 +246,6 @@ class _QuizClientScreenState extends State<QuizClientScreen> {
             ),
           ),
         ),
-        const SizedBox(height: 8),
-        Text(
-          '等待房主开始游戏...',
-          style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-          textAlign: TextAlign.center,
-        ),
       ],
     );
   }

@@ -27,6 +27,11 @@ class _QuizHostScreenState extends State<QuizHostScreen> {
   bool _isInitialized = false;
   StreamSubscription<QuizRoom>? _roomUpdateSubscription;
 
+  // 题型数量设置
+  int _trueFalseCount = 1; // 判断题数量，默认1道
+  int _singleChoiceCount = 1; // 单选题数量，默认1道
+  int _multipleChoiceCount = 1; // 多选题数量，默认1道
+
   @override
   void initState() {
     super.initState();
@@ -44,13 +49,17 @@ class _QuizHostScreenState extends State<QuizHostScreen> {
 
     _hostService = QuizHostService();
 
-    // 创建房间
+    // 创建房间 - 使用配置的题型数量
     final room = QuizRoom(
       id: 'room_${DateTime.now().millisecondsSinceEpoch}',
       name: '${widget.playerName}的房间',
       hostId: 'host',
       maxPlayers: 2,
-      questions: SampleQuestions.getRandomQuestions(3), // 随机5道题
+      questions: SampleQuestions.getQuestionsByConfig(
+        trueFalseCount: _trueFalseCount,
+        singleChoiceCount: _singleChoiceCount,
+        multipleChoiceCount: _multipleChoiceCount,
+      ),
     );
 
     // 添加房主作为玩家
@@ -115,30 +124,127 @@ class _QuizHostScreenState extends State<QuizHostScreen> {
       ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(4),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // 房间信息
+              // 题目设置
               Card(
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(8),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        '房间信息',
-                        style: Theme.of(context).textTheme.titleLarge,
+                      // 判断题数量
+                      _buildQuestionCountSetting(
+                        label: '判断题',
+                        count: _trueFalseCount,
+                        onChanged: (value) {
+                          setState(() {
+                            _trueFalseCount = value;
+                          });
+                          _updateRoomQuestions();
+                        },
+                        icon: Icons.check_circle_outline,
+                        color: Colors.blue,
                       ),
-                      const SizedBox(height: 8),
-                      Text('题目数量: ${_room!.questions.length}'),
-                      Text('最大玩家数: ${_room!.maxPlayers}'),
-                      Text('当前玩家数: ${_room!.players.length}'),
+                      const SizedBox(height: 12),
+                      // 单选题数量
+                      _buildQuestionCountSetting(
+                        label: '单选题',
+                        count: _singleChoiceCount,
+                        onChanged: (value) {
+                          setState(() {
+                            _singleChoiceCount = value;
+                          });
+                          _updateRoomQuestions();
+                        },
+                        icon: Icons.radio_button_checked,
+                        color: Colors.green,
+                      ),
+                      const SizedBox(height: 12),
+                      // 多选题数量
+                      _buildQuestionCountSetting(
+                        label: '多选题',
+                        count: _multipleChoiceCount,
+                        onChanged: (value) {
+                          setState(() {
+                            _multipleChoiceCount = value;
+                          });
+                          _updateRoomQuestions();
+                        },
+                        icon: Icons.checklist,
+                        color: Colors.orange,
+                      ),
+                      const SizedBox(height: 12),
+                      // 总题数显示
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.purple.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: Colors.purple.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.quiz,
+                                  color: Colors.purple[700],
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  '总题数',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.purple[700],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Text(
+                              '${_trueFalseCount + _singleChoiceCount + _multipleChoiceCount} ',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.purple[700],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
               ),
               const SizedBox(height: 16),
+
+              // 房间信息
+              // Card(
+              //   child: Padding(
+              //     padding: const EdgeInsets.all(16),
+              //     child: Column(
+              //       crossAxisAlignment: CrossAxisAlignment.start,
+              //       children: [
+              //         Text(
+              //           '房间信息',
+              //           style: Theme.of(context).textTheme.titleLarge,
+              //         ),
+              //         const SizedBox(height: 8),
+              //         Text('题目数量: ${_room!.questions.length}'),
+              //         Text('最大玩家数: ${_room!.maxPlayers}'),
+              //         Text('当前玩家数: ${_room!.players.length}'),
+              //       ],
+              //     ),
+              //   ),
+              // ),
+              // const SizedBox(height: 16),
 
               // 玩家列表
               Expanded(
@@ -224,6 +330,84 @@ class _QuizHostScreenState extends State<QuizHostScreen> {
       MaterialPageRoute(
         builder: (context) =>
             QuizGameScreen(isHost: true, hostService: _hostService),
+      ),
+    );
+  }
+
+  /// 更新房间的题目列表
+  void _updateRoomQuestions() {
+    if (_room == null || !_isInitialized) return;
+
+    final newQuestions = SampleQuestions.getQuestionsByConfig(
+      trueFalseCount: _trueFalseCount,
+      singleChoiceCount: _singleChoiceCount,
+      multipleChoiceCount: _multipleChoiceCount,
+    );
+
+    // 通过游戏控制器更新题目
+    _hostService.gameController.updateQuestions(newQuestions);
+  }
+
+  /// 构建题型数量设置控件
+  Widget _buildQuestionCountSetting({
+    required String label,
+    required int count,
+    required ValueChanged<int> onChanged,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 16),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: color.withValues(alpha: 0.9),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Slider(
+              value: count.toDouble(),
+              min: 0,
+              max: 10,
+              divisions: 10,
+              activeColor: color,
+              inactiveColor: color.withValues(alpha: 0.3),
+              onChanged: (value) {
+                onChanged(value.round());
+              },
+            ),
+          ),
+          Container(
+            width: 28,
+            height: 20,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: color.withValues(alpha: 0.3)),
+            ),
+            child: Text(
+              '$count',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
