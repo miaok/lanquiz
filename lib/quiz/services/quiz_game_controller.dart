@@ -1,6 +1,7 @@
 import 'dart:async';
 import '../models/quiz_room.dart';
 import '../models/player.dart';
+import '../models/question.dart';
 
 /// 知识竞答游戏控制器
 class QuizGameController {
@@ -139,13 +140,15 @@ class QuizGameController {
   }
 
   /// 重新开始游戏
-  void restartGame() {
+  void restartGame([List<Question>? newQuestions]) {
     List<QuizPlayer> updatedPlayers = [];
     for (int i = 0; i < room.players.length; i++) {
+      final player = room.players[i];
       updatedPlayers.add(
-        room.players[i].copyWith(
+        player.copyWith(
           score: 0,
-          isReady: false,
+          // 房主默认准备好，其他玩家需要重新准备
+          isReady: player.id == 'host',
           answerTime: 0,
           forceNullCurrentAnswer: true,
           currentQuestionIndex: 0,
@@ -161,6 +164,7 @@ class QuizGameController {
       currentQuestionIndex: 0,
       questionStartTime: null,
       players: updatedPlayers,
+      questions: newQuestions ?? room.questions,
     );
 
     _notifyUpdate();

@@ -9,15 +9,20 @@ import 'quiz_game_screen.dart';
 /// 房主页面
 class QuizHostScreen extends StatefulWidget {
   final String playerName;
+  final QuizHostService? existingService;
 
-  const QuizHostScreen({super.key, required this.playerName});
+  const QuizHostScreen({
+    super.key,
+    required this.playerName,
+    this.existingService,
+  });
 
   @override
   State<QuizHostScreen> createState() => _QuizHostScreenState();
 }
 
 class _QuizHostScreenState extends State<QuizHostScreen> {
-  final QuizHostService _hostService = QuizHostService();
+  late QuizHostService _hostService;
   QuizRoom? _room;
   bool _isInitialized = false;
   StreamSubscription<QuizRoom>? _roomUpdateSubscription;
@@ -29,13 +34,23 @@ class _QuizHostScreenState extends State<QuizHostScreen> {
   }
 
   Future<void> _initializeHost() async {
+    if (widget.existingService != null) {
+      _hostService = widget.existingService!;
+      _room = _hostService.gameController.room;
+      _isInitialized = true;
+      _setupRoomListener();
+      return;
+    }
+
+    _hostService = QuizHostService();
+
     // 创建房间
     final room = QuizRoom(
       id: 'room_${DateTime.now().millisecondsSinceEpoch}',
       name: '${widget.playerName}的房间',
       hostId: 'host',
       maxPlayers: 2,
-      questions: SampleQuestions.getRandomQuestions(5), // 随机5道题
+      questions: SampleQuestions.getRandomQuestions(3), // 随机5道题
     );
 
     // 添加房主作为玩家
@@ -55,16 +70,7 @@ class _QuizHostScreenState extends State<QuizHostScreen> {
         _isInitialized = true;
       });
 
-      // 监听房间更新
-      _roomUpdateSubscription = _hostService.gameController.roomUpdates.listen((
-        updatedRoom,
-      ) {
-        if (mounted) {
-          setState(() {
-            _room = updatedRoom;
-          });
-        }
-      });
+      _setupRoomListener();
     } else {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -73,6 +79,18 @@ class _QuizHostScreenState extends State<QuizHostScreen> {
         Navigator.pop(context);
       }
     }
+  }
+
+  void _setupRoomListener() {
+    _roomUpdateSubscription = _hostService.gameController.roomUpdates.listen((
+      updatedRoom,
+    ) {
+      if (mounted) {
+        setState(() {
+          _room = updatedRoom;
+        });
+      }
+    });
   }
 
   @override

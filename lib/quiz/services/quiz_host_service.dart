@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import '../models/quiz_room.dart';
 import '../models/player.dart';
+import '../data/sample_questions.dart';
 import 'quiz_network_service.dart';
 import 'quiz_game_controller.dart';
 
@@ -142,6 +143,13 @@ class QuizHostService {
       print('开始游戏，广播房间状态');
       // gameController.startGame() 会触发 roomUpdates，自动广播更新
     }
+  }
+
+  /// 重新开始游戏（生成新题目）
+  void restartGame() {
+    final newQuestions = SampleQuestions.getRandomQuestions(3);
+    gameController.restartGame(newQuestions);
+    print('游戏已重置，新题目已生成');
   }
 
   /// 关闭服务

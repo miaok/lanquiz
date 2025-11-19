@@ -1,18 +1,111 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/quiz_room.dart';
 import '../models/player.dart';
+import '../services/quiz_host_service.dart';
+import '../services/quiz_client_service.dart';
 import 'quiz_home_screen.dart';
+import 'quiz_host_screen.dart';
+import 'quiz_client_screen.dart';
 
 /// 结果页面
-class QuizResultScreen extends StatelessWidget {
+class QuizResultScreen extends StatefulWidget {
   final QuizRoom room;
+  final bool isHost;
+  final QuizHostService? hostService;
+  final QuizClientService? clientService;
 
-  const QuizResultScreen({super.key, required this.room});
+  const QuizResultScreen({
+    super.key,
+    required this.room,
+    this.isHost = false,
+    this.hostService,
+    this.clientService,
+  });
+
+  @override
+  State<QuizResultScreen> createState() => _QuizResultScreenState();
+}
+
+class _QuizResultScreenState extends State<QuizResultScreen> {
+  StreamSubscription<QuizRoom>? _roomSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _setupListener();
+  }
+
+  void _setupListener() {
+    if (widget.isHost && widget.hostService != null) {
+      _roomSubscription = widget.hostService!.gameController.roomUpdates.listen(
+        _handleRoomUpdate,
+      );
+    } else if (!widget.isHost && widget.clientService != null) {
+      _roomSubscription = widget.clientService!.roomUpdates.listen(
+        _handleRoomUpdate,
+      );
+    }
+  }
+
+  void _handleRoomUpdate(QuizRoom room) {
+    if (!mounted) return;
+
+    // 如果房间状态变为 waiting，说明游戏已重置，跳转回大厅
+    if (room.status == RoomStatus.waiting) {
+      _navigateToLobby();
+    }
+  }
+
+  void _navigateToLobby() {
+    // 获取当前玩家名称
+    String playerName = '';
+    String myPlayerId = widget.isHost
+        ? 'host'
+        : (widget.clientService?.myPlayerId ?? '');
+
+    try {
+      final myPlayer = widget.room.players.firstWhere(
+        (p) => p.id == myPlayerId,
+      );
+      playerName = myPlayer.name;
+    } catch (e) {
+      playerName = 'Player';
+    }
+
+    if (widget.isHost) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => QuizHostScreen(
+            playerName: playerName,
+            existingService: widget.hostService,
+          ),
+        ),
+      );
+    } else {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => QuizClientScreen(
+            playerName: playerName,
+            existingService: widget.clientService,
+          ),
+        ),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _roomSubscription?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     // 按分数排序
-    final sortedPlayers = List<QuizPlayer>.from(room.players);
+    final sortedPlayers = List<QuizPlayer>.from(widget.room.players);
     sortedPlayers.sort((a, b) => b.score.compareTo(a.score));
 
     return Scaffold(
@@ -39,36 +132,75 @@ class QuizResultScreen extends StatelessWidget {
               ),
             ),
 
-            // 返回按钮
+            // 按钮区域
             Padding(
               padding: const EdgeInsets.all(16),
-              child: SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(context).pushAndRemoveUntil(
-                      MaterialPageRoute(
-                        builder: (context) => const QuizHomeScreen(),
+              child: Column(
+                children: [
+                  // 再来一局按钮（仅房主可见）
+                  if (widget.isHost) ...[
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: ElevatedButton(
+                        onPressed: _restartGame,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          '再来一局',
+                          style: TextStyle(fontSize: 18),
+                        ),
                       ),
-                      (route) => false,
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue[700],
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // 返回主页按钮
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        // 如果是房主且点击返回主页，应该关闭服务
+                        if (widget.isHost) {
+                          widget.hostService?.dispose();
+                        } else {
+                          widget.clientService?.dispose();
+                        }
+
+                        Navigator.of(context).pushAndRemoveUntil(
+                          MaterialPageRoute(
+                            builder: (context) => const QuizHomeScreen(),
+                          ),
+                          (route) => false,
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue[700],
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text('返回主页', style: TextStyle(fontSize: 18)),
                     ),
                   ),
-                  child: const Text('返回主页', style: TextStyle(fontSize: 18)),
-                ),
+                ],
               ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  void _restartGame() {
+    widget.hostService?.restartGame();
   }
 
   Widget _buildWinnerCard(QuizPlayer winner) {
@@ -84,7 +216,7 @@ class QuizResultScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.amber.withValues(alpha: 0.3),
+            color: Colors.amber.withOpacity(0.3),
             blurRadius: 10,
             offset: const Offset(0, 5),
           ),
@@ -93,15 +225,6 @@ class QuizResultScreen extends StatelessWidget {
       child: Column(
         children: [
           const Icon(Icons.emoji_events, size: 32, color: Colors.white),
-          const SizedBox(height: 12),
-          const Text(
-            '冠军',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
           const SizedBox(height: 8),
           Text(
             winner.name,

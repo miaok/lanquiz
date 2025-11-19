@@ -8,18 +8,24 @@ import 'quiz_game_screen.dart';
 /// 客户端页面（玩家）
 class QuizClientScreen extends StatefulWidget {
   final String playerName;
+  final QuizClientService? existingService;
 
-  const QuizClientScreen({super.key, required this.playerName});
+  const QuizClientScreen({
+    super.key,
+    required this.playerName,
+    this.existingService,
+  });
 
   @override
   State<QuizClientScreen> createState() => _QuizClientScreenState();
 }
 
 class _QuizClientScreenState extends State<QuizClientScreen> {
-  final QuizClientService _clientService = QuizClientService();
+  late QuizClientService _clientService;
   String _status = '正在搜索房间...';
   QuizRoom? _room;
   bool _isConnected = false;
+  bool _isNavigating = false;
   StreamSubscription<String>? _statusSubscription;
   StreamSubscription<QuizRoom>? _roomSubscription;
 
@@ -30,12 +36,40 @@ class _QuizClientScreenState extends State<QuizClientScreen> {
   }
 
   Future<void> _connectToHost() async {
+    if (widget.existingService != null) {
+      _clientService = widget.existingService!;
+      _room = _clientService.currentRoom;
+      _isConnected = true; // 已经连接
+      _status = '已连接';
+      _setupListeners();
+      return;
+    }
+
+    _clientService = QuizClientService();
+
     // 创建玩家
     final player = QuizPlayer(
       id: 'player_${DateTime.now().millisecondsSinceEpoch}',
       name: widget.playerName,
     );
 
+    _setupListeners();
+
+    // 连接到主机
+    final success = await _clientService.discoverAndConnect(player);
+    if (!success && mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('连接失败')));
+    } else if (success && mounted) {
+      setState(() {
+        _isConnected = true;
+        _status = '已连接';
+      });
+    }
+  }
+
+  void _setupListeners() {
     // 监听状态更新
     _statusSubscription = _clientService.statusUpdates.listen((status) {
       if (mounted) {
@@ -50,10 +84,11 @@ class _QuizClientScreenState extends State<QuizClientScreen> {
       if (mounted) {
         setState(() {
           _room = room;
+          _isConnected = true;
 
           // 如果游戏开始，跳转到游戏页面
-          if (room.status == RoomStatus.playing && !_isConnected) {
-            _isConnected = true;
+          if (room.status == RoomStatus.playing && !_isNavigating) {
+            _isNavigating = true;
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
@@ -67,14 +102,6 @@ class _QuizClientScreenState extends State<QuizClientScreen> {
         });
       }
     });
-
-    // 连接到主机
-    final success = await _clientService.discoverAndConnect(player);
-    if (!success && mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('连接失败')));
-    }
   }
 
   @override
