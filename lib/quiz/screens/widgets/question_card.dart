@@ -29,7 +29,10 @@ class QuestionCard extends StatelessWidget {
                   WidgetSpan(
                     child: Container(
                       margin: const EdgeInsets.only(right: 6),
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: _getTypeColor(questionType),
                         borderRadius: BorderRadius.circular(8),
@@ -38,7 +41,7 @@ class QuestionCard extends StatelessWidget {
                         questionType.label,
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 12,
+                          fontSize: 14,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -48,7 +51,7 @@ class QuestionCard extends StatelessWidget {
                   TextSpan(
                     text: questionText,
                     style: const TextStyle(
-                      fontSize: 18,
+                      fontSize: 20,
                       fontWeight: FontWeight.bold,
                       color: Colors.black87,
                     ),
@@ -73,4 +76,3 @@ class QuestionCard extends StatelessWidget {
     }
   }
 }
-

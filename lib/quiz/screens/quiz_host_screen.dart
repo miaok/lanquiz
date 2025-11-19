@@ -48,6 +48,11 @@ class _QuizHostScreenState extends State<QuizHostScreen> {
     }
 
     _hostService = QuizHostService();
+    _hostService.updateQuestionConfig(
+      trueFalseCount: _trueFalseCount,
+      singleChoiceCount: _singleChoiceCount,
+      multipleChoiceCount: _multipleChoiceCount,
+    );
 
     // 创建房间 - 使用配置的题型数量
     final room = QuizRoom(
@@ -351,6 +356,13 @@ class _QuizHostScreenState extends State<QuizHostScreen> {
     if (_room == null || !_isInitialized) return;
 
     final newQuestions = QuestionRepository.getQuestionsByConfig(
+      trueFalseCount: _trueFalseCount,
+      singleChoiceCount: _singleChoiceCount,
+      multipleChoiceCount: _multipleChoiceCount,
+    );
+
+    // 更新 Service 中的配置
+    _hostService.updateQuestionConfig(
       trueFalseCount: _trueFalseCount,
       singleChoiceCount: _singleChoiceCount,
       multipleChoiceCount: _multipleChoiceCount,

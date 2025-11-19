@@ -24,7 +24,6 @@ class _QuizClientScreenState extends State<QuizClientScreen> {
   late QuizClientService _clientService;
   String _status = '正在搜索房间...';
   QuizRoom? _room;
-  bool _isConnected = false;
   bool _isNavigating = false;
   StreamSubscription<String>? _statusSubscription;
   StreamSubscription<QuizRoom>? _roomSubscription;
@@ -39,7 +38,6 @@ class _QuizClientScreenState extends State<QuizClientScreen> {
     if (widget.existingService != null) {
       _clientService = widget.existingService!;
       _room = _clientService.currentRoom;
-      _isConnected = true; // 已经连接
       _status = '已连接';
       _setupListeners();
       return;
@@ -63,7 +61,6 @@ class _QuizClientScreenState extends State<QuizClientScreen> {
       ).showSnackBar(const SnackBar(content: Text('连接失败')));
     } else if (success && mounted) {
       setState(() {
-        _isConnected = true;
         _status = '已连接';
       });
     }
@@ -84,7 +81,6 @@ class _QuizClientScreenState extends State<QuizClientScreen> {
       if (mounted) {
         setState(() {
           _room = room;
-          _isConnected = true;
 
           // 如果游戏开始，跳转到游戏页面
           if (room.status == RoomStatus.playing && !_isNavigating) {

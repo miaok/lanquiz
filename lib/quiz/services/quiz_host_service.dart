@@ -154,9 +154,29 @@ class QuizHostService {
     }
   }
 
+  // 题目配置
+  int _trueFalseCount = 1;
+  int _singleChoiceCount = 1;
+  int _multipleChoiceCount = 1;
+
+  /// 更新题目配置
+  void updateQuestionConfig({
+    required int trueFalseCount,
+    required int singleChoiceCount,
+    required int multipleChoiceCount,
+  }) {
+    _trueFalseCount = trueFalseCount;
+    _singleChoiceCount = singleChoiceCount;
+    _multipleChoiceCount = multipleChoiceCount;
+  }
+
   /// 重新开始游戏（生成新题目）
   void restartGame() {
-    final newQuestions = QuestionRepository.getRandomQuestions(3);
+    final newQuestions = QuestionRepository.getQuestionsByConfig(
+      trueFalseCount: _trueFalseCount,
+      singleChoiceCount: _singleChoiceCount,
+      multipleChoiceCount: _multipleChoiceCount,
+    );
     gameController.restartGame(newQuestions);
     print('游戏已重置，新题目已生成');
   }

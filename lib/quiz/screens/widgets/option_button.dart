@@ -35,7 +35,7 @@ class OptionButton extends StatelessWidget {
     }
   }
 
-  // 单选题/判断题选项（移除字母标签）
+  // 单选题/判断题选项
   Widget _buildSingleChoiceOption() {
     final isSelected = selectedAnswer == index;
 
@@ -49,7 +49,7 @@ class OptionButton extends StatelessWidget {
     }
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 18),
       child: OutlinedButton(
         onPressed: hasAnswered || isSelected ? null : onSelectSingle,
         style: OutlinedButton.styleFrom(
@@ -65,7 +65,7 @@ class OptionButton extends StatelessWidget {
             Expanded(
               child: Text(
                 question.options[index],
-                style: const TextStyle(fontSize: 18, color: Colors.black87),
+                style: const TextStyle(fontSize: 20, color: Colors.black87),
               ),
             ),
           ],
@@ -74,7 +74,7 @@ class OptionButton extends StatelessWidget {
     );
   }
 
-  // 多选题选项（移除复选框）
+  // 多选题选项
   Widget _buildMultipleChoiceOption() {
     final isSelected = selectedAnswers.contains(index);
 

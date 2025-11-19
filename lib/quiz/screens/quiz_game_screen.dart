@@ -40,10 +40,18 @@ class _QuizGameScreenState extends State<QuizGameScreen> {
   bool _showFeedback = false;
   bool _isFeedbackCorrect = false;
 
+  // 乱序状态
+  int _currentQuestionIndex = -1;
+  List<int> _shuffledIndices = [];
+
   @override
   void initState() {
     super.initState();
     _setupListeners();
+    // 初始化乱序状态
+    if (_room != null) {
+      _updateQuestionState(_room!);
+    }
   }
 
   void _setupListeners() {
@@ -53,7 +61,7 @@ class _QuizGameScreenState extends State<QuizGameScreen> {
         (room) {
           if (mounted) {
             setState(() {
-              _checkForQuestionChange(room);
+              _updateQuestionState(room);
               _room = room;
 
               if (room.status == RoomStatus.finished) {
@@ -68,7 +76,7 @@ class _QuizGameScreenState extends State<QuizGameScreen> {
       _roomSubscription = widget.clientService!.roomUpdates.listen((room) {
         if (mounted) {
           setState(() {
-            _checkForQuestionChange(room);
+            _updateQuestionState(room);
             _room = room;
 
             if (room.status == RoomStatus.finished) {
@@ -110,22 +118,26 @@ class _QuizGameScreenState extends State<QuizGameScreen> {
     }
   }
 
-  void _checkForQuestionChange(QuizRoom newRoom) {
-    if (_room == null) return;
-
-    final oldPlayer = _room!.players.firstWhere(
-      (p) => p.id == _myPlayerId,
-      orElse: () => _room!.players.first,
-    );
+  void _updateQuestionState(QuizRoom newRoom) {
     final newPlayer = newRoom.players.firstWhere(
       (p) => p.id == _myPlayerId,
       orElse: () => newRoom.players.first,
     );
 
-    if (newPlayer.currentQuestionIndex != oldPlayer.currentQuestionIndex) {
+    if (newPlayer.currentQuestionIndex != _currentQuestionIndex) {
+      _currentQuestionIndex = newPlayer.currentQuestionIndex;
       _selectedAnswer = null;
       _selectedAnswers.clear();
       _showFeedback = false;
+
+      // 生成新的乱序索引
+      if (_currentQuestionIndex < newRoom.questions.length) {
+        final question = newRoom.questions[_currentQuestionIndex];
+        _shuffledIndices = List.generate(question.options.length, (i) => i)
+          ..shuffle();
+      } else {
+        _shuffledIndices = [];
+      }
     }
   }
 
@@ -222,21 +234,20 @@ class _QuizGameScreenState extends State<QuizGameScreen> {
                           ),
                           const SizedBox(height: 16),
 
-                          // 选项
-                          ...List.generate(
-                            question.options.length,
-                            (index) => OptionButton(
+                          // 选项 (使用乱序索引)
+                          ..._shuffledIndices.map((originalIndex) {
+                            return OptionButton(
                               question: question,
-                              index: index,
+                              index: originalIndex,
                               hasAnswered: myPlayer.currentAnswer != null,
                               selectedAnswer: _selectedAnswer,
                               selectedAnswers: _selectedAnswers,
                               onSelectSingle: () =>
-                                  _selectSingleAnswer(index, question),
+                                  _selectSingleAnswer(originalIndex, question),
                               onToggleMultiple: () =>
-                                  _toggleMultipleChoice(index),
-                            ),
-                          ),
+                                  _toggleMultipleChoice(originalIndex),
+                            );
+                          }),
 
                           // 多选题确认按钮
                           if (question.type == QuestionType.multipleChoice &&
