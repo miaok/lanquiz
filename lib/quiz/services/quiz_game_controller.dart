@@ -56,6 +56,7 @@ class QuizGameController {
           isFinished: false,
           comboCount: 0,
           lastAnswerResult: AnswerResult.none,
+          wrongAnswers: [],
         ),
       );
     }
@@ -112,6 +113,18 @@ class QuizGameController {
     final isLastQuestion =
         player.currentQuestionIndex >= room.questions.length - 1;
 
+    // 记录错题
+    List<Map<String, dynamic>> updatedWrongAnswers = List.from(
+      player.wrongAnswers,
+    );
+    if (!isCorrect) {
+      updatedWrongAnswers.add({
+        'questionId': question.id,
+        'playerAnswer': answerIndex,
+        'correctAnswer': question.correctAnswer,
+      });
+    }
+
     final updatedPlayers = List<QuizPlayer>.from(room.players);
     updatedPlayers[index] = player.copyWith(
       currentAnswer: answerIndex,
@@ -119,6 +132,7 @@ class QuizGameController {
       score: newScore,
       comboCount: newComboCount,
       lastAnswerResult: answerResult,
+      wrongAnswers: updatedWrongAnswers,
       // 如果不是最后一题，自动进入下一题
       currentQuestionIndex: isLastQuestion
           ? player.currentQuestionIndex
@@ -155,6 +169,7 @@ class QuizGameController {
           isFinished: false,
           comboCount: 0,
           lastAnswerResult: AnswerResult.none,
+          wrongAnswers: [], // Reset wrong answers on game restart
         ),
       );
     }

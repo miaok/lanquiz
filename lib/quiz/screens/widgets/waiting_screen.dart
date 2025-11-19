@@ -23,7 +23,7 @@ class WaitingScreen extends StatelessWidget {
 
     return PopScope(
       canPop: false,
-      onPopInvoked: (didPop) {
+      onPopInvokedWithResult: (didPop, _) {
         if (!didPop) {
           onShowExitDialog();
         }

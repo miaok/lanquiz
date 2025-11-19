@@ -105,12 +105,14 @@ class _PlayerScoreBoardState extends State<PlayerScoreBoard> {
                     key: ValueKey('host_progress_${hostPlayer.id}'),
                     player: hostPlayer,
                     shouldAnimate: _shouldAnimate(hostPlayer),
-                    currentValue: hostPlayer.currentQuestionIndex,
+                    currentValue: hostPlayer.isFinished
+                        ? widget.totalQuestions
+                        : hostPlayer.currentQuestionIndex,
                     maxValue: widget.totalQuestions,
                     isScore: false,
                     isReversed: true, // 从右到左
                     label:
-                        '${hostPlayer.currentQuestionIndex}/${widget.totalQuestions}',
+                        '${hostPlayer.isFinished ? widget.totalQuestions : hostPlayer.currentQuestionIndex}/${widget.totalQuestions}',
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -121,12 +123,14 @@ class _PlayerScoreBoardState extends State<PlayerScoreBoard> {
                           key: ValueKey('client_progress_${clientPlayer.id}'),
                           player: clientPlayer,
                           shouldAnimate: _shouldAnimate(clientPlayer),
-                          currentValue: clientPlayer.currentQuestionIndex,
+                          currentValue: clientPlayer.isFinished
+                              ? widget.totalQuestions
+                              : clientPlayer.currentQuestionIndex,
                           maxValue: widget.totalQuestions,
                           isScore: false,
                           isReversed: true, // 从右到左
                           label:
-                              '${clientPlayer.currentQuestionIndex}/${widget.totalQuestions}',
+                              '${clientPlayer.isFinished ? widget.totalQuestions : clientPlayer.currentQuestionIndex}/${widget.totalQuestions}',
                         )
                       : const SizedBox(),
                 ),

@@ -216,7 +216,7 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.amber.withOpacity(0.3),
+            color: Colors.amber.withValues(alpha: 0.3),
             blurRadius: 10,
             offset: const Offset(0, 5),
           ),
@@ -263,54 +263,185 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
       medalIcon = Icons.emoji_events;
     }
 
+    final hasWrongAnswers = player.wrongAnswers.isNotEmpty;
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: rank <= 3 ? 4 : 1,
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: Container(
-          width: 50,
-          height: 50,
-          decoration: BoxDecoration(
-            color: medalColor ?? Colors.grey[300],
-            shape: BoxShape.circle,
-          ),
-          child: Center(
-            child: medalIcon != null
-                ? Icon(medalIcon, color: Colors.white, size: 28)
-                : Text(
-                    '$rank',
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          enabled: hasWrongAnswers,
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          leading: Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: medalColor ?? Colors.grey[300],
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: medalIcon != null
+                  ? Icon(medalIcon, color: Colors.white, size: 28)
+                  : Text(
+                      '$rank',
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
-                  ),
-          ),
-        ),
-        title: Text(
-          player.name,
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: rank <= 3 ? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
-        trailing: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.blue[700],
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Text(
-            '${player.score} 分',
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
             ),
           ),
+          title: Text(
+            player.name,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: rank <= 3 ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.blue[700],
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '${player.score} 分',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+              if (hasWrongAnswers) ...[
+                const SizedBox(width: 8),
+                const Icon(Icons.expand_more, color: Colors.grey),
+              ],
+            ],
+          ),
+          children: [
+            if (hasWrongAnswers)
+              Container(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Divider(),
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 8.0),
+                      child: Text(
+                        '错题回顾:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red,
+                        ),
+                      ),
+                    ),
+                    ...player.wrongAnswers.map((wrongAnswer) {
+                      return _buildWrongAnswerItem(wrongAnswer);
+                    }),
+                  ],
+                ),
+              ),
+          ],
         ),
       ),
     );
+  }
+
+  Widget _buildWrongAnswerItem(Map<String, dynamic> wrongAnswer) {
+    final questionId = wrongAnswer['questionId'] as String;
+    final playerAnswer = wrongAnswer['playerAnswer'];
+    final correctAnswer = wrongAnswer['correctAnswer'];
+
+    // 查找题目
+    final question = widget.room.questions.firstWhere(
+      (q) => q.id == questionId,
+      orElse: () => widget.room.questions.first, // Fallback
+    );
+
+    String playerAnswerText = _formatAnswer(question, playerAnswer);
+    String correctAnswerText = _formatAnswer(question, correctAnswer);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            question.question,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const Text('你的答案: ', style: TextStyle(color: Colors.grey)),
+              Expanded(
+                child: Text(
+                  playerAnswerText,
+                  style: const TextStyle(
+                    color: Colors.red,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              const Text('正确答案: ', style: TextStyle(color: Colors.grey)),
+              Expanded(
+                child: Text(
+                  correctAnswerText,
+                  style: const TextStyle(
+                    color: Colors.green,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatAnswer(dynamic question, dynamic answer) {
+    if (answer == null) return '未作答';
+
+    try {
+      if (answer is int) {
+        if (answer >= 0 && answer < question.options.length) {
+          return question.options[answer];
+        }
+      } else if (answer is List) {
+        final indices = answer.cast<int>()..sort();
+        return indices
+            .map(
+              (i) => (i >= 0 && i < question.options.length)
+                  ? question.options[i]
+                  : '?',
+            )
+            .join(', ');
+      }
+    } catch (e) {
+      return answer.toString();
+    }
+    return answer.toString();
   }
 }

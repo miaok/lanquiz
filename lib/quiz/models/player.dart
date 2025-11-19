@@ -17,6 +17,7 @@ class QuizPlayer {
   bool isFinished; // 是否完成所有题目
   int comboCount; // 连击数(连续答对的题目数)
   AnswerResult lastAnswerResult; // 最后一次答题结果
+  final List<Map<String, dynamic>> wrongAnswers; // 错题记录
 
   QuizPlayer({
     required this.id,
@@ -29,6 +30,7 @@ class QuizPlayer {
     this.isFinished = false,
     this.comboCount = 0,
     this.lastAnswerResult = AnswerResult.none,
+    this.wrongAnswers = const [],
   });
 
   Map<String, dynamic> toJson() => {
@@ -42,6 +44,7 @@ class QuizPlayer {
     'isFinished': isFinished,
     'comboCount': comboCount,
     'lastAnswerResult': lastAnswerResult.index,
+    'wrongAnswers': wrongAnswers,
   };
 
   factory QuizPlayer.fromJson(Map<String, dynamic> json) => QuizPlayer(
@@ -55,6 +58,7 @@ class QuizPlayer {
     isFinished: json['isFinished'] ?? false,
     comboCount: json['comboCount'] ?? 0,
     lastAnswerResult: AnswerResult.values[json['lastAnswerResult'] ?? 0],
+    wrongAnswers: List<Map<String, dynamic>>.from(json['wrongAnswers'] ?? []),
   );
 
   QuizPlayer copyWith({
@@ -68,6 +72,7 @@ class QuizPlayer {
     bool? isFinished,
     int? comboCount,
     AnswerResult? lastAnswerResult,
+    List<Map<String, dynamic>>? wrongAnswers,
     bool forceNullCurrentAnswer = false,
   }) {
     return QuizPlayer(
@@ -83,6 +88,7 @@ class QuizPlayer {
       isFinished: isFinished ?? this.isFinished,
       comboCount: comboCount ?? this.comboCount,
       lastAnswerResult: lastAnswerResult ?? this.lastAnswerResult,
+      wrongAnswers: wrongAnswers ?? this.wrongAnswers,
     );
   }
 }

@@ -35,7 +35,7 @@ class OptionButton extends StatelessWidget {
     }
   }
 
-  // 单选题/判断题选项
+  // 单选题/判断题选项（移除字母标签）
   Widget _buildSingleChoiceOption() {
     final isSelected = selectedAnswer == index;
 
@@ -62,28 +62,10 @@ class OptionButton extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: borderColor ?? Colors.grey,
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: Text(
-                  String.fromCharCode(65 + index), // A, B, C, D
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
             Expanded(
               child: Text(
                 question.options[index],
-                style: const TextStyle(fontSize: 16, color: Colors.black87),
+                style: const TextStyle(fontSize: 18, color: Colors.black87),
               ),
             ),
           ],
@@ -92,7 +74,7 @@ class OptionButton extends StatelessWidget {
     );
   }
 
-  // 多选题选项
+  // 多选题选项（移除复选框）
   Widget _buildMultipleChoiceOption() {
     final isSelected = selectedAnswers.contains(index);
 
@@ -118,20 +100,6 @@ class OptionButton extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // 复选框
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: isSelected ? (borderColor ?? Colors.blue) : Colors.white,
-                border: Border.all(color: borderColor ?? Colors.grey, width: 2),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: isSelected
-                  ? const Icon(Icons.check, color: Colors.white, size: 20)
-                  : null,
-            ),
-            const SizedBox(width: 12),
             Expanded(
               child: Text(
                 question.options[index],

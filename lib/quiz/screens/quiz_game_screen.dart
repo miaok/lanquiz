@@ -147,7 +147,7 @@ class _QuizGameScreenState extends State<QuizGameScreen> {
 
     return PopScope(
       canPop: false, // 禁止返回
-      onPopInvoked: (didPop) {
+      onPopInvokedWithResult: (didPop, result) {
         if (!didPop) {
           // 显示确认对话框
           _showExitConfirmDialog();
@@ -179,13 +179,13 @@ class _QuizGameScreenState extends State<QuizGameScreen> {
                   // 题目区域
                   Expanded(
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(12),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           // 题目
                           QuestionCard(questionText: question.question),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 16),
 
                           // 选项
                           ...List.generate(
