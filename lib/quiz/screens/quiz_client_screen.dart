@@ -114,23 +114,61 @@ class _QuizClientScreenState extends State<QuizClientScreen> {
   void dispose() {
     _statusSubscription?.cancel();
     _roomSubscription?.cancel();
-    // 注意：不要在这里关闭 _clientService，因为游戏页面还需要使用它
-    // _clientService 会在游戏页面结束时关闭
+    // 如果不是通过游戏开始导航离开,则清理服务
+    if (!_isNavigating) {
+      print('QuizClientScreen dispose: 清理客户端服务');
+      _clientService.dispose();
+    }
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('加入房间'),
-        backgroundColor: Colors.blue[700],
-        foregroundColor: Colors.white,
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: _room == null ? _buildLoadingView() : _buildWaitingView(),
+    return PopScope<bool>(
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return; // 如果已经弹出，直接返回
+        
+        // 拦截返回操作,显示确认对话框
+        final shouldPop = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('确认退出'),
+            content: const Text('退出将断开与房间的连接。确定要退出吗?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('取消'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text('确定'),
+              ),
+            ],
+          ),
+        );
+
+        if (shouldPop == true) {
+          // 用户确认退出,清理服务
+          print('用户确认退出,清理客户端服务');
+          await _clientService.dispose();
+          // 手动触发返回操作
+          if (context.mounted) {
+            Navigator.of(context).pop(true);
+          }
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('加入房间'),
+          backgroundColor: Colors.blue[700],
+          foregroundColor: Colors.white,
+        ),
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: _room == null ? _buildLoadingView() : _buildWaitingView(),
+          ),
         ),
       ),
     );

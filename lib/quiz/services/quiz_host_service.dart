@@ -27,32 +27,113 @@ class QuizHostService {
   /// 初始化主机
   Future<bool> initialize(QuizRoom room) async {
     try {
+      // 先清理可能存在的旧连接
+      await _cleanupResources();
+
       gameController = QuizGameController(room);
 
-      // 绑定TCP服务器
+      // 获取本地IP
       _hostIp = await _networkService.getLocalIPv4();
-      _server = await ServerSocket.bind(
-        InternetAddress.anyIPv4,
-        QuizNetworkService.tcpPort,
-      );
-      _server!.listen(_handleNewClient);
+      print('尝试在 $_hostIp:${QuizNetworkService.tcpPort} 启动主机...');
+
+      // 绑定TCP服务器,启用端口重用
+      try {
+        _server = await ServerSocket.bind(
+          InternetAddress.anyIPv4,
+          QuizNetworkService.tcpPort,
+          shared: true, // 允许端口重用
+        );
+
+        // 设置服务器选项
+        _server!.listen(
+          _handleNewClient,
+          onError: (error) {
+            print('服务器监听错误: $error');
+          },
+          cancelOnError: false,
+        );
+
+        print('TCP服务器已启动,端口: ${QuizNetworkService.tcpPort}');
+      } catch (e) {
+        print('绑定TCP端口失败: $e');
+        // 尝试强制清理后重试一次
+        await Future.delayed(const Duration(milliseconds: 500));
+        await _cleanupResources();
+        await Future.delayed(const Duration(milliseconds: 500));
+
+        _server = await ServerSocket.bind(
+          InternetAddress.anyIPv4,
+          QuizNetworkService.tcpPort,
+          shared: true,
+        );
+        _server!.listen(_handleNewClient, cancelOnError: false);
+        print('TCP服务器重试成功');
+      }
 
       // 启动UDP广播
-      _udp = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
-      _udp!.broadcastEnabled = true;
-      _startBeacon();
+      try {
+        _udp = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
+        _udp!.broadcastEnabled = true;
+        _startBeacon();
+        print('UDP广播已启动');
+      } catch (e) {
+        print('启动UDP广播失败: $e');
+        // UDP失败不影响主要功能,继续运行
+      }
 
       // 监听房间更新
       gameController.roomUpdates.listen((room) {
         _broadcastRoomUpdate();
       });
 
-      print('主机已启动，IP: $_hostIp');
+      print('主机已成功启动,IP: $_hostIp');
       return true;
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('初始化主机失败: $e');
+      print('堆栈跟踪: $stackTrace');
+      // 确保清理资源
+      await _cleanupResources();
       return false;
     }
+  }
+
+  /// 清理资源(内部方法,不关闭gameController)
+  Future<void> _cleanupResources() async {
+    print('清理网络资源...');
+
+    // 停止UDP广播
+    _beacon?.cancel();
+    _beacon = null;
+
+    try {
+      _udp?.close();
+      _udp = null;
+    } catch (e) {
+      print('关闭UDP失败: $e');
+    }
+
+    // 关闭所有客户端连接
+    for (final client in _clients.toList()) {
+      try {
+        client.destroy();
+      } catch (e) {
+        print('关闭客户端连接失败: $e');
+      }
+    }
+    _clients.clear();
+    _clientPlayerIds.clear();
+
+    // 关闭服务器
+    try {
+      await _server?.close();
+      _server = null;
+      // 等待端口释放
+      await Future.delayed(const Duration(milliseconds: 100));
+    } catch (e) {
+      print('关闭服务器失败: $e');
+    }
+
+    print('网络资源清理完成');
   }
 
   /// 启动UDP广播信标
@@ -182,34 +263,28 @@ class QuizHostService {
   }
 
   /// 关闭服务
-  void dispose() {
+  Future<void> dispose() async {
     print('主机服务正在关闭...');
 
-    // 先停止UDP广播
-    _beacon?.cancel();
-    _udp?.close();
+    // 关闭游戏控制器(停止发送更新)
+    try {
+      gameController.dispose();
+    } catch (e) {
+      print('关闭游戏控制器失败: $e');
+    }
 
-    // 关闭游戏控制器（停止发送更新）
-    gameController.dispose();
+    // 清理网络资源
+    await _cleanupResources();
 
-    // 关闭所有客户端连接
-    for (final client in _clients.toList()) {
+    // 关闭事件控制器
+    if (!_clientDisconnectController.isClosed) {
       try {
-        client.destroy();
+        _clientDisconnectController.close();
       } catch (e) {
-        print('关闭客户端连接失败: $e');
+        print('关闭断连控制器失败: $e');
       }
     }
-    _clients.clear();
-    _clientPlayerIds.clear();
 
-    if (!_clientDisconnectController.isClosed) {
-      _clientDisconnectController.close();
-    }
-
-    // 最后关闭服务器
-    _server?.close();
-
-    print('主机服务已关闭');
+    print('主机服务已完全关闭');
   }
 }

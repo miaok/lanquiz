@@ -21,6 +21,13 @@ class QuizHostScreen extends StatefulWidget {
   State<QuizHostScreen> createState() => _QuizHostScreenState();
 }
 
+// 快捷设置模式枚举
+enum QuizPresetMode {
+  casual, // 娱乐模式
+  standard, // 标准模式
+  extreme, // 极限模式
+}
+
 class _QuizHostScreenState extends State<QuizHostScreen> {
   late QuizHostService _hostService;
   QuizRoom? _room;
@@ -31,6 +38,9 @@ class _QuizHostScreenState extends State<QuizHostScreen> {
   int _trueFalseCount = 10; // 判断题数量，默认1道
   int _singleChoiceCount = 10; // 单选题数量，默认1道
   int _multipleChoiceCount = 10; // 多选题数量，默认1道
+
+  // 当前选中的预设模式
+  QuizPresetMode? _selectedPreset = QuizPresetMode.casual;
 
   @override
   void initState() {
@@ -122,10 +132,16 @@ class _QuizHostScreenState extends State<QuizHostScreen> {
   @override
   void dispose() {
     _roomUpdateSubscription?.cancel();
-    // 注意：不要在这里关闭 _hostService，因为游戏页面还需要使用它
-    // _hostService 会在游戏页面结束时关闭
+    // 如果不是通过 _startGame 导航离开,则清理服务
+    // 通过检查是否还有其他路由来判断
+    if (!_isNavigatingToGame) {
+      print('QuizHostScreen dispose: 清理主机服务');
+      _hostService.dispose();
+    }
     super.dispose();
   }
+
+  bool _isNavigatingToGame = false;
 
   @override
   Widget build(BuildContext context) {
@@ -133,207 +149,229 @@ class _QuizHostScreenState extends State<QuizHostScreen> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_room!.name),
-        backgroundColor: Colors.blue[700],
-        foregroundColor: Colors.white,
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(4),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // 题目设置
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // 判断题数量
-                      _buildQuestionCountSetting(
-                        label: '判断题',
-                        count: _trueFalseCount,
-                        onChanged: (value) {
-                          setState(() {
-                            _trueFalseCount = value;
-                          });
-                          _updateRoomQuestions();
-                        },
-                        icon: Icons.check_circle_outline,
-                        color: Colors.blue,
-                      ),
-                      const SizedBox(height: 12),
-                      // 单选题数量
-                      _buildQuestionCountSetting(
-                        label: '单选题',
-                        count: _singleChoiceCount,
-                        onChanged: (value) {
-                          setState(() {
-                            _singleChoiceCount = value;
-                          });
-                          _updateRoomQuestions();
-                        },
-                        icon: Icons.radio_button_checked,
-                        color: Colors.green,
-                      ),
-                      const SizedBox(height: 12),
-                      // 多选题数量
-                      _buildQuestionCountSetting(
-                        label: '多选题',
-                        count: _multipleChoiceCount,
-                        onChanged: (value) {
-                          setState(() {
-                            _multipleChoiceCount = value;
-                          });
-                          _updateRoomQuestions();
-                        },
-                        icon: Icons.checklist,
-                        color: Colors.orange,
-                      ),
-                      const SizedBox(height: 12),
-                      // 总题数显示
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.purple.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: Colors.purple.withValues(alpha: 0.3),
-                          ),
+    return PopScope<bool>(
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return; // 如果已经弹出，直接返回
+        
+        // 拦截返回操作,显示确认对话框
+        final shouldPop = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('确认退出'),
+            content: const Text('退出将关闭房间,所有玩家将被断开连接。确定要退出吗?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('取消'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text('确定'),
+              ),
+            ],
+          ),
+        );
+
+        if (shouldPop == true) {
+          // 用户确认退出,清理服务
+          print('用户确认退出,清理主机服务');
+          await _hostService.dispose();
+          // 手动触发返回操作
+          if (context.mounted) {
+            Navigator.of(context).pop(true);
+          }
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(_room!.name),
+          backgroundColor: Colors.blue[700],
+          foregroundColor: Colors.white,
+        ),
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // 题目设置
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // 判断题数量
+                        _buildQuestionCountSetting(
+                          label: '判断题',
+                          count: _trueFalseCount,
+                          onChanged: (value) {
+                            setState(() {
+                              _trueFalseCount = value;
+                              _selectedPreset = null; // 手动调整时清除预设
+                            });
+                            _updateRoomQuestions();
+                          },
+                          icon: Icons.check_circle_outline,
+                          color: Colors.blue,
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        const SizedBox(height: 12),
+                        // 单选题数量
+                        _buildQuestionCountSetting(
+                          label: '单选题',
+                          count: _singleChoiceCount,
+                          onChanged: (value) {
+                            setState(() {
+                              _singleChoiceCount = value;
+                              _selectedPreset = null; // 手动调整时清除预设
+                            });
+                            _updateRoomQuestions();
+                          },
+                          icon: Icons.radio_button_checked,
+                          color: Colors.green,
+                        ),
+                        const SizedBox(height: 12),
+                        // 多选题数量
+                        _buildQuestionCountSetting(
+                          label: '多选题',
+                          count: _multipleChoiceCount,
+                          onChanged: (value) {
+                            setState(() {
+                              _multipleChoiceCount = value;
+                              _selectedPreset = null; // 手动调整时清除预设
+                            });
+                            _updateRoomQuestions();
+                          },
+                          icon: Icons.checklist,
+                          color: Colors.orange,
+                        ),
+                        const SizedBox(height: 12),
+                        // 快捷设置按钮
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.quiz,
-                                  color: Colors.purple[700],
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  '总题数',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.purple[700],
+                            Center(
+                              child: SegmentedButton<QuizPresetMode>(
+                                segments: const [
+                                  ButtonSegment<QuizPresetMode>(
+                                    value: QuizPresetMode.casual,
+                                    label: Text('娱乐'),
+                                    icon: Icon(
+                                      Icons.sentiment_satisfied_alt,
+                                      size: 18,
+                                    ),
                                   ),
+                                  ButtonSegment<QuizPresetMode>(
+                                    value: QuizPresetMode.standard,
+                                    label: Text('标准'),
+                                    icon: Icon(Icons.star, size: 18),
+                                  ),
+                                  ButtonSegment<QuizPresetMode>(
+                                    value: QuizPresetMode.extreme,
+                                    label: Text('极限'),
+                                    icon: Icon(
+                                      Icons.local_fire_department,
+                                      size: 18,
+                                    ),
+                                  ),
+                                ],
+                                selected: _selectedPreset != null
+                                    ? {_selectedPreset!}
+                                    : {},
+                                onSelectionChanged:
+                                    (Set<QuizPresetMode> selected) {
+                                      if (selected.isNotEmpty) {
+                                        _applyPresetMode(selected.first);
+                                      }
+                                    },
+                                style: ButtonStyle(
+                                  visualDensity: VisualDensity.compact,
                                 ),
-                              ],
-                            ),
-                            Text(
-                              '${_trueFalseCount + _singleChoiceCount + _multipleChoiceCount} ',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.purple[700],
                               ),
                             ),
                           ],
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // 房间信息
-              // Card(
-              //   child: Padding(
-              //     padding: const EdgeInsets.all(16),
-              //     child: Column(
-              //       crossAxisAlignment: CrossAxisAlignment.start,
-              //       children: [
-              //         Text(
-              //           '房间信息',
-              //           style: Theme.of(context).textTheme.titleLarge,
-              //         ),
-              //         const SizedBox(height: 8),
-              //         Text('题目数量: ${_room!.questions.length}'),
-              //         Text('最大玩家数: ${_room!.maxPlayers}'),
-              //         Text('当前玩家数: ${_room!.players.length}'),
-              //       ],
-              //     ),
-              //   ),
-              // ),
-              // const SizedBox(height: 16),
-
-              // 玩家列表
-              Expanded(
-                child: Card(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Text(
-                          '玩家列表',
-                          style: Theme.of(context).textTheme.titleLarge,
-                        ),
-                      ),
-                      const Divider(height: 1),
-                      Expanded(
-                        child: ListView.builder(
-                          itemCount: _room!.players.length,
-                          itemBuilder: (context, index) {
-                            final player = _room!.players[index];
-                            return ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor: player.isReady
-                                    ? Colors.green
-                                    : Colors.grey,
-                                child: Text(
-                                  player.name[0].toUpperCase(),
-                                  style: const TextStyle(color: Colors.white),
-                                ),
-                              ),
-                              title: Text(player.name),
-                              subtitle: Text(player.id == 'host' ? '房主' : '玩家'),
-                              trailing: Icon(
-                                player.isReady
-                                    ? Icons.check_circle
-                                    : Icons.circle_outlined,
-                                color: player.isReady
-                                    ? Colors.green
-                                    : Colors.grey,
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // 开始游戏按钮
-              SizedBox(
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: _room!.allPlayersReady ? _startGame : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white,
-                    disabledBackgroundColor: Colors.grey[300],
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      ],
                     ),
                   ),
-                  child: Text(
-                    _room!.allPlayersReady
-                        ? '开始游戏'
-                        : '等待所有玩家准备 (${_room!.players.where((p) => p.isReady).length}/${_room!.players.length})',
-                    style: const TextStyle(fontSize: 18),
+                ),
+                const SizedBox(height: 16),
+
+                // 玩家列表
+                Expanded(
+                  child: Card(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Text(
+                            '玩家列表',
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                        ),
+                        const Divider(height: 1),
+                        Expanded(
+                          child: ListView.builder(
+                            itemCount: _room!.players.length,
+                            itemBuilder: (context, index) {
+                              final player = _room!.players[index];
+                              return ListTile(
+                                leading: CircleAvatar(
+                                  backgroundColor: player.isReady
+                                      ? Colors.green
+                                      : Colors.grey,
+                                  child: Text(
+                                    player.name[0].toUpperCase(),
+                                    style: const TextStyle(color: Colors.white),
+                                  ),
+                                ),
+                                title: Text(player.name),
+                                subtitle: Text(
+                                  player.id == 'host' ? '房主' : '玩家',
+                                ),
+                                trailing: Icon(
+                                  player.isReady
+                                      ? Icons.check_circle
+                                      : Icons.circle_outlined,
+                                  color: player.isReady
+                                      ? Colors.green
+                                      : Colors.grey,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 16),
+
+                // 开始游戏按钮
+                SizedBox(
+                  height: 56,
+                  child: ElevatedButton(
+                    onPressed: _room!.allPlayersReady ? _startGame : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: Colors.grey[300],
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      _room!.allPlayersReady
+                          ? '开始游戏'
+                          : '等待所有玩家准备 (${_room!.players.where((p) => p.isReady).length}/${_room!.players.length})',
+                      style: const TextStyle(fontSize: 18),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -341,6 +379,7 @@ class _QuizHostScreenState extends State<QuizHostScreen> {
   }
 
   void _startGame() {
+    _isNavigatingToGame = true;
     _hostService.startGame();
     Navigator.pushReplacement(
       context,
@@ -370,6 +409,34 @@ class _QuizHostScreenState extends State<QuizHostScreen> {
 
     // 通过游戏控制器更新题目
     _hostService.gameController.updateQuestions(newQuestions);
+  }
+
+  /// 应用预设模式
+  void _applyPresetMode(QuizPresetMode mode) {
+    setState(() {
+      _selectedPreset = mode;
+      switch (mode) {
+        case QuizPresetMode.casual:
+          // 娱乐模式: 各10题
+          _trueFalseCount = 10;
+          _singleChoiceCount = 10;
+          _multipleChoiceCount = 10;
+          break;
+        case QuizPresetMode.standard:
+          // 标准模式: 判断34、单选和多选33
+          _trueFalseCount = 34;
+          _singleChoiceCount = 33;
+          _multipleChoiceCount = 33;
+          break;
+        case QuizPresetMode.extreme:
+          // 极限模式: 判断68、单选和多选66
+          _trueFalseCount = 68;
+          _singleChoiceCount = 66;
+          _multipleChoiceCount = 66;
+          break;
+      }
+    });
+    _updateRoomQuestions();
   }
 
   /// 构建题型数量设置控件

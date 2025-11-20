@@ -166,13 +166,15 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
                     width: double.infinity,
                     height: 56,
                     child: ElevatedButton(
-                      onPressed: () {
-                        // 如果是房主且点击返回主页，应该关闭服务
+                      onPressed: () async {
+                        // 如果是房主且点击返回主页,应该关闭服务
                         if (widget.isHost) {
-                          widget.hostService?.dispose();
+                          await widget.hostService?.dispose();
                         } else {
-                          widget.clientService?.dispose();
+                          await widget.clientService?.dispose();
                         }
+
+                        if (!mounted) return;
 
                         Navigator.of(context).pushAndRemoveUntil(
                           MaterialPageRoute(

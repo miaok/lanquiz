@@ -23,7 +23,6 @@ class Question {
   final List<String> options;
   final QuestionType type; // 题型
   final dynamic correctAnswer; // 正确答案（单选/判断：int，多选：List<int>）
-  final int points;
 
   Question({
     required this.id,
@@ -31,7 +30,6 @@ class Question {
     required this.options,
     required this.correctAnswer,
     this.type = QuestionType.singleChoice, // 默认单选题
-    this.points = 10,
   });
 
   /// 判断答案是否正确
@@ -63,7 +61,6 @@ class Question {
     'options': options,
     'type': type.name,
     'correctAnswer': correctAnswer,
-    'points': points,
   };
 
   factory Question.fromJson(Map<String, dynamic> json) => Question(
@@ -75,7 +72,6 @@ class Question {
       orElse: () => QuestionType.singleChoice,
     ),
     correctAnswer: json['correctAnswer'],
-    points: json['points'] ?? 10,
   );
 
   /// 兼容旧版本的构造方法（使用 correctAnswerIndex）
@@ -84,14 +80,12 @@ class Question {
     required String question,
     required List<String> options,
     required int correctAnswerIndex,
-    int points = 10,
   }) => Question(
     id: id,
     question: question,
     options: options,
     correctAnswer: correctAnswerIndex,
     type: QuestionType.singleChoice,
-    points: points,
   );
 
   /// 获取正确答案索引（仅用于单选题/判断题）

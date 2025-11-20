@@ -31,6 +31,9 @@ class QuizClientService {
   /// 发现并连接到主机
   Future<bool> discoverAndConnect(QuizPlayer player) async {
     try {
+      // 先清理可能存在的旧连接
+      await _cleanupConnection();
+
       myPlayerId = player.id;
       _updateStatus('正在搜索房间...');
 
@@ -43,12 +46,36 @@ class QuizClientService {
 
       _updateStatus('连接到房间: ${host.$3}');
 
-      // 连接到主机
-      _tcp = await Socket.connect(
-        host.$1,
-        host.$2,
-        timeout: const Duration(seconds: 5),
-      );
+      // 连接到主机,添加重试机制
+      int retryCount = 0;
+      const maxRetries = 3;
+
+      while (retryCount < maxRetries) {
+        try {
+          _tcp = await Socket.connect(
+            host.$1,
+            host.$2,
+            timeout: const Duration(seconds: 5),
+          );
+
+          // 设置Socket选项
+          _tcp!.setOption(SocketOption.tcpNoDelay, true);
+
+          print('成功连接到主机: ${host.$1}:${host.$2}');
+          break;
+        } catch (e) {
+          retryCount++;
+          print('连接失败 (尝试 $retryCount/$maxRetries): $e');
+
+          if (retryCount >= maxRetries) {
+            _updateStatus('连接失败: 无法连接到主机');
+            return false;
+          }
+
+          // 等待后重试
+          await Future.delayed(Duration(milliseconds: 500 * retryCount));
+        }
+      }
 
       // 发送加入请求
       final joinMessage = NetworkMessage(
@@ -63,19 +90,29 @@ class QuizClientService {
           .listen(
             _handleServerMessage,
             onDone: () {
+              print('与主机的连接已断开');
               _updateStatus('已断开连接');
-              _disconnectController.add(null);
+              if (!_disconnectController.isClosed) {
+                _disconnectController.add(null);
+              }
             },
             onError: (error) {
+              print('连接错误: $error');
               _updateStatus('连接错误: $error');
-              _disconnectController.add(null);
+              if (!_disconnectController.isClosed) {
+                _disconnectController.add(null);
+              }
             },
+            cancelOnError: false,
           );
 
       _updateStatus('已连接');
       return true;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('连接失败: $e');
+      print('堆栈跟踪: $stackTrace');
       _updateStatus('连接失败: $e');
+      await _cleanupConnection();
       return false;
     }
   }
@@ -201,28 +238,75 @@ class QuizClientService {
     }
   }
 
+  /// 清理连接资源(内部方法)
+  Future<void> _cleanupConnection() async {
+    print('清理客户端连接资源...');
+
+    // 取消TCP订阅
+    try {
+      await _tcpSub?.cancel();
+      _tcpSub = null;
+    } catch (e) {
+      print('取消TCP订阅失败: $e');
+    }
+
+    // 关闭TCP连接
+    try {
+      _tcp?.destroy();
+      _tcp = null;
+      // 等待连接完全关闭
+      await Future.delayed(const Duration(milliseconds: 100));
+    } catch (e) {
+      print('关闭TCP连接失败: $e');
+    }
+
+    // 关闭UDP
+    try {
+      _udp?.close();
+      _udp = null;
+    } catch (e) {
+      print('关闭UDP失败: $e');
+    }
+
+    // 清理状态
+    currentRoom = null;
+    myPlayerId = null;
+
+    print('客户端连接资源清理完成');
+  }
+
   /// 断开连接
-  void dispose() {
+  Future<void> dispose() async {
     print('客户端服务正在关闭...');
 
-    // 先取消TCP订阅，停止接收新消息
-    _tcpSub?.cancel();
+    // 清理连接资源
+    await _cleanupConnection();
 
-    // 关闭Socket连接
-    _tcp?.destroy();
-    _udp?.close();
-
-    // 最后关闭stream controller
+    // 关闭stream controller
     if (!_roomUpdateController.isClosed) {
-      _roomUpdateController.close();
-    }
-    if (!_statusController.isClosed) {
-      _statusController.close();
-    }
-    if (!_disconnectController.isClosed) {
-      _disconnectController.close();
+      try {
+        _roomUpdateController.close();
+      } catch (e) {
+        print('关闭房间更新控制器失败: $e');
+      }
     }
 
-    print('客户端服务已关闭');
+    if (!_statusController.isClosed) {
+      try {
+        _statusController.close();
+      } catch (e) {
+        print('关闭状态控制器失败: $e');
+      }
+    }
+
+    if (!_disconnectController.isClosed) {
+      try {
+        _disconnectController.close();
+      } catch (e) {
+        print('关闭断连控制器失败: $e');
+      }
+    }
+
+    print('客户端服务已完全关闭');
   }
 }
