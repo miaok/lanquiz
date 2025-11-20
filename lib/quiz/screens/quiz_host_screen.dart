@@ -152,7 +152,7 @@ class _QuizHostScreenState extends State<QuizHostScreen> {
     return PopScope<bool>(
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return; // 如果已经弹出，直接返回
-        
+
         // 拦截返回操作,显示确认对话框
         final shouldPop = await showDialog<bool>(
           context: context,
@@ -279,6 +279,7 @@ class _QuizHostScreenState extends State<QuizHostScreen> {
                                 selected: _selectedPreset != null
                                     ? {_selectedPreset!}
                                     : {},
+                                emptySelectionAllowed: true, // 允许空选择
                                 onSelectionChanged:
                                     (Set<QuizPresetMode> selected) {
                                       if (selected.isNotEmpty) {

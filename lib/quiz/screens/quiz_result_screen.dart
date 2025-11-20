@@ -112,20 +112,48 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('游戏结果'),
-        backgroundColor: Colors.blue[700],
+        backgroundColor: const Color(0xFF1976D2),
         foregroundColor: Colors.white,
         automaticallyImplyLeading: false,
+        elevation: 0,
+        centerTitle: true,
       ),
       body: SafeArea(
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 冠军展示
-            if (sortedPlayers.isNotEmpty) _buildWinnerCard(sortedPlayers[0]),
+            // 获奖者横向展示区域
+            if (sortedPlayers.isNotEmpty) _buildWinnersSection(sortedPlayers),
+            
+            // 分隔线
+            Container(
+              height: 1,
+              color: Colors.grey[300],
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+            ),
+
+            // 排行榜标题
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Row(
+                children: [
+                  Icon(Icons.leaderboard, color: Colors.blue[700], size: 24),
+                  const SizedBox(width: 8),
+                  Text(
+                    '查看错题',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue[700],
+                    ),
+                  ),
+                ],
+              ),
+            ),
 
             // 排行榜
             Expanded(
               child: ListView.builder(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 itemCount: sortedPlayers.length,
                 itemBuilder: (context, index) {
                   return _buildRankItem(sortedPlayers[index], index + 1);
@@ -151,6 +179,7 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
+                          elevation: 2,
                         ),
                         child: const Text(
                           '再来一局',
@@ -174,7 +203,8 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
                           await widget.clientService?.dispose();
                         }
 
-                        if (!mounted) return;
+                        // 确保widget仍然挂载且context有效
+                        if (!mounted || !context.mounted) return;
 
                         Navigator.of(context).pushAndRemoveUntil(
                           MaterialPageRoute(
@@ -184,11 +214,12 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
                         );
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue[700],
+                        backgroundColor: const Color(0xFF1976D2),
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
+                        elevation: 2,
                       ),
                       child: const Text('返回主页', style: TextStyle(fontSize: 18)),
                     ),
@@ -202,96 +233,205 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
     );
   }
 
-  void _restartGame() {
-    widget.hostService?.restartGame();
-  }
-
-  Widget _buildWinnerCard(QuizPlayer winner) {
+  /// 构建获奖者区域（竖向排列，减少占据空间）
+  Widget _buildWinnersSection(List<QuizPlayer> players) {
+    final winners = players.take(3).toList();
+    
     return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.amber[700]!, Colors.amber[400]!],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.amber.withValues(alpha: 0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
+      padding: const EdgeInsets.all(16),
       child: Column(
-        children: [
-          const Icon(Icons.emoji_events, size: 32, color: Colors.white),
-          const SizedBox(height: 8),
-          Text(
-            winner.name,
-            style: const TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            '${winner.score} 分',
-            style: const TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [          
+          // 竖向获奖者卡片（节省空间）
+          ...winners.asMap().entries.map((entry) {
+            final player = entry.value;
+            final rank = entry.key + 1;
+            return Padding(
+              padding: EdgeInsets.only(
+                top: rank == 1 ? 0 : 8, // 第一张卡片不需要上边距
+                bottom: rank == winners.length ? 0 : 8, // 最后一张卡片不需要下边距
+              ),
+              child: _buildWinnerCard(player, rank, isMainWinner: rank == 1),
+            );
+          }),
         ],
       ),
     );
   }
 
+  /// 构建获奖者卡片（横向布局）
+  Widget _buildWinnerCard(QuizPlayer winner, int rank, {required bool isMainWinner}) {
+    Color? cardColor;
+    Color? accentColor;
+    IconData? medalIcon;
+    
+    if (rank == 1) {
+      cardColor = const Color(0xFFFFB74D); // 金色
+      accentColor = const Color(0xFFFF8F00);
+      medalIcon = Icons.emoji_events;
+    } else if (rank == 2) {
+      cardColor = const Color(0xFFBDBDBD); // 银色
+      accentColor = const Color(0xFF757575);
+      medalIcon = Icons.emoji_events;
+    } else {
+      cardColor = const Color(0xFFBCAAA4); // 铜色
+      accentColor = const Color(0xFF6D4C41);
+      medalIcon = Icons.emoji_events;
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            cardColor,
+            cardColor.withValues(alpha: 0.8),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: accentColor.withValues(alpha: 0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // 左侧：排名和图标
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 排名标识
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    '第$rank名',
+                    style: TextStyle(
+                      fontSize: isMainWinner ? 14 : 12,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                
+                // 奖杯图标
+                Icon(
+                  medalIcon,
+                  color: Colors.white,
+                  size: isMainWinner ? 28 : 24,
+                ),
+              ],
+            ),
+            
+            // 中间：玩家名称
+            Expanded(
+              child: Text(
+                winner.name,
+                style: TextStyle(
+                  fontSize: isMainWinner ? 16 : 14,
+                  fontWeight: isMainWinner ? FontWeight.bold : FontWeight.w600,
+                  color: Colors.white,
+                ),
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            
+            // 右侧：得分
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                '${winner.score}分',
+                style: TextStyle(
+                  fontSize: isMainWinner ? 14 : 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _restartGame() {
+    widget.hostService?.restartGame();
+  }
+
   Widget _buildRankItem(QuizPlayer player, int rank) {
     Color? medalColor;
     IconData? medalIcon;
+    Color rankColor;
 
     if (rank == 1) {
-      medalColor = Colors.amber[700];
+      medalColor = const Color(0xFFFFB74D);
       medalIcon = Icons.emoji_events;
+      rankColor = const Color(0xFFFF8F00);
     } else if (rank == 2) {
-      medalColor = Colors.grey[400];
+      medalColor = const Color(0xFFBDBDBD);
       medalIcon = Icons.emoji_events;
+      rankColor = const Color(0xFF757575);
     } else if (rank == 3) {
-      medalColor = Colors.brown[400];
+      medalColor = const Color(0xFFBCAAA4);
       medalIcon = Icons.emoji_events;
+      rankColor = const Color(0xFF6D4C41);
+    } else {
+      medalColor = Colors.blue[100];
+      rankColor = Colors.blue[700]!;
     }
 
     final hasWrongAnswers = player.wrongAnswers.isNotEmpty;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      elevation: rank <= 3 ? 4 : 1,
+      elevation: rank <= 3 ? 4 : 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
           enabled: hasWrongAnswers,
-          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           leading: Container(
             width: 50,
             height: 50,
             decoration: BoxDecoration(
-              color: medalColor ?? Colors.grey[300],
+              color: medalColor,
               shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: rankColor.withValues(alpha: 0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: Center(
               child: medalIcon != null
-                  ? Icon(medalIcon, color: Colors.white, size: 28)
+                  ? Icon(medalIcon, color: Colors.white, size: 24)
                   : Text(
                       '$rank',
-                      style: const TextStyle(
-                        fontSize: 20,
+                      style: TextStyle(
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: rankColor,
                       ),
                     ),
             ),
@@ -301,6 +441,7 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
             style: TextStyle(
               fontSize: 18,
               fontWeight: rank <= 3 ? FontWeight.bold : FontWeight.normal,
+              color: Colors.grey[800],
             ),
           ),
           trailing: Row(
@@ -312,42 +453,74 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.blue[700],
+                  color: rank <= 3 ? rankColor : Colors.blue[100],
                   borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: (rank <= 3 ? rankColor : Colors.blue[100]!).withValues(alpha: 0.3),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
                 child: Text(
                   '${player.score} 分',
-                  style: const TextStyle(
-                    fontSize: 18,
+                  style: TextStyle(
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: rank <= 3 ? Colors.white : Colors.blue[700],
                   ),
                 ),
               ),
               if (hasWrongAnswers) ...[
                 const SizedBox(width: 8),
-                const Icon(Icons.expand_more, color: Colors.grey),
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.red[100],
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.expand_more,
+                    color: Colors.red[600],
+                    size: 20,
+                  ),
+                ),
               ],
             ],
           ),
           children: [
             if (hasWrongAnswers)
               Container(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey[200]!),
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Divider(),
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: 8.0),
-                      child: Text(
-                        '错题回顾:',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.red,
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          color: Colors.red[600],
+                          size: 20,
                         ),
-                      ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '错题回顾',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red[600],
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
                     ),
+                    const SizedBox(height: 12),
                     ...player.wrongAnswers.map((wrongAnswer) {
                       return _buildWrongAnswerItem(wrongAnswer);
                     }),
