@@ -103,7 +103,10 @@ class _QuizClientScreenState extends State<QuizClientScreen> {
     _clientService.onDisconnected.listen((_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('与主机断开连接'), backgroundColor: Colors.red),
+          SnackBar(
+            content: const Text('与主机断开连接'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
         );
         Navigator.popUntil(context, (route) => route.isFirst);
       }
@@ -124,10 +127,13 @@ class _QuizClientScreenState extends State<QuizClientScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return PopScope<bool>(
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return; // 如果已经弹出，直接返回
-        
+
         // 拦截返回操作,显示确认对话框
         final shouldPop = await showDialog<bool>(
           context: context,
@@ -141,7 +147,7 @@ class _QuizClientScreenState extends State<QuizClientScreen> {
               ),
               TextButton(
                 onPressed: () => Navigator.pop(context, true),
-                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                style: TextButton.styleFrom(foregroundColor: colorScheme.error),
                 child: const Text('确定'),
               ),
             ],
@@ -159,15 +165,13 @@ class _QuizClientScreenState extends State<QuizClientScreen> {
         }
       },
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('加入房间'),
-          backgroundColor: Colors.blue[700],
-          foregroundColor: Colors.white,
-        ),
+        appBar: AppBar(title: const Text('加入房间')),
         body: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(16),
-            child: _room == null ? _buildLoadingView() : _buildWaitingView(),
+            child: _room == null
+                ? _buildLoadingView()
+                : _buildWaitingView(colorScheme, textTheme),
           ),
         ),
       ),
@@ -191,7 +195,7 @@ class _QuizClientScreenState extends State<QuizClientScreen> {
     );
   }
 
-  Widget _buildWaitingView() {
+  Widget _buildWaitingView(ColorScheme colorScheme, TextTheme textTheme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -238,12 +242,12 @@ class _QuizClientScreenState extends State<QuizClientScreen> {
                       return ListTile(
                         leading: CircleAvatar(
                           backgroundColor: player.isReady
-                              ? Colors.green
-                              : Colors.grey,
-                          child: Text(
-                            player.name[0].toUpperCase(),
-                            style: const TextStyle(color: Colors.white),
-                          ),
+                              ? colorScheme.primaryContainer
+                              : colorScheme.surfaceContainerHighest,
+                          foregroundColor: player.isReady
+                              ? colorScheme.onPrimaryContainer
+                              : colorScheme.onSurfaceVariant,
+                          child: Text(player.name[0].toUpperCase()),
                         ),
                         title: Text(
                           player.name + (isMe ? ' (我)' : ''),
@@ -260,7 +264,9 @@ class _QuizClientScreenState extends State<QuizClientScreen> {
                           player.isReady
                               ? Icons.check_circle
                               : Icons.circle_outlined,
-                          color: player.isReady ? Colors.green : Colors.grey,
+                          color: player.isReady
+                              ? colorScheme.primary
+                              : colorScheme.onSurfaceVariant,
                         ),
                       );
                     },
@@ -275,18 +281,20 @@ class _QuizClientScreenState extends State<QuizClientScreen> {
         // 准备按钮
         SizedBox(
           height: 56,
-          child: ElevatedButton(
+          child: FilledButton(
             onPressed: _toggleReady,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _isReady() ? Colors.orange : Colors.green,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+            style: FilledButton.styleFrom(
+              backgroundColor: _isReady()
+                  ? colorScheme.secondaryContainer
+                  : colorScheme.primary,
             ),
             child: Text(
               _isReady() ? '取消准备' : '准备',
-              style: const TextStyle(fontSize: 18),
+              style: textTheme.titleMedium?.copyWith(
+                color: _isReady()
+                    ? colorScheme.onSecondaryContainer
+                    : colorScheme.onPrimary,
+              ),
             ),
           ),
         ),

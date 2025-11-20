@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:math';
 import 'quiz_host_screen.dart';
 import 'quiz_client_screen.dart';
+import '../widgets/theme_switcher.dart';
 
 /// 知识竞答主页
 class QuizHomeScreen extends StatefulWidget {
@@ -32,19 +33,19 @@ class _QuizHomeScreenState extends State<QuizHomeScreen> {
   String _generateRandomNickname() {
     const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     const numbers = '0123456789';
-    
+
     String nickname = '';
-    
+
     // 生成3个随机字母
     for (int i = 0; i < 3; i++) {
       nickname += letters[_random.nextInt(letters.length)];
     }
-    
+
     // 生成2个随机数字
     for (int i = 0; i < 2; i++) {
       nickname += numbers[_random.nextInt(numbers.length)];
     }
-    
+
     return nickname;
   }
 
@@ -53,7 +54,7 @@ class _QuizHomeScreenState extends State<QuizHomeScreen> {
     setState(() {
       _nameController.text = _generateRandomNickname();
     });
-    
+
     // 显示提示消息
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -66,104 +67,87 @@ class _QuizHomeScreenState extends State<QuizHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // 获取主题色彩方案
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return Scaffold(
-      backgroundColor: Colors.blue[50],
+      backgroundColor: colorScheme.surface,
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // 标题
-                Icon(Icons.quiz, size: 80, color: Colors.blue[700]),
-                const SizedBox(height: 16),
-                Text(
-                  '知识竞答',
-                  style: TextStyle(
-                    fontSize: 36,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blue[900],
-                  ),
-                ),
-                const SizedBox(height: 32),
-
-                // 输入框
-                Container(
-                  constraints: const BoxConstraints(maxWidth: 400),
-                  child: TextField(
-                    controller: _nameController,
-                    decoration: InputDecoration(
-                      labelText: '请输入您的昵称',
-                      prefixIcon: const Icon(Icons.person),
-                      suffixIcon: IconButton(
-                        icon: const Icon(Icons.shuffle),
-                        onPressed: _generateNewNickname,
-                        tooltip: '生成随机昵称',
+        child: Stack(
+          children: [
+            // 主题切换按钮（右上角）
+            Positioned(top: 8, right: 8, child: const ThemeSwitcher()),
+            // 主要内容
+            Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // 标题
+                    Icon(Icons.quiz, size: 80, color: colorScheme.primary),
+                    const SizedBox(height: 16),
+                    Text(
+                      '知识竞答',
+                      style: textTheme.displaySmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface,
                       ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      filled: true,
-                      fillColor: Colors.white,
                     ),
-                  ),
-                ),
-                const SizedBox(height: 32),
+                    const SizedBox(height: 32),
 
-                // 按钮
-                Container(
-                  constraints: const BoxConstraints(maxWidth: 400),
-                  child: Column(
-                    children: [
-                      SizedBox(
-                        width: double.infinity,
-                        height: 56,
-                        child: ElevatedButton.icon(
-                          onPressed: _createRoom,
-                          icon: const Icon(Icons.add_circle_outline),
-                          label: const Text(
-                            '创建房间',
-                            style: TextStyle(fontSize: 18),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue[700],
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
+                    // 输入框
+                    Container(
+                      constraints: const BoxConstraints(maxWidth: 400),
+                      child: TextField(
+                        controller: _nameController,
+                        decoration: const InputDecoration(
+                          labelText: '请输入您的昵称',
+                          prefixIcon: Icon(Icons.person),
+                          suffixIcon: _ShuffleIconButton(),
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 56,
-                        child: OutlinedButton.icon(
-                          onPressed: _joinRoom,
-                          icon: const Icon(Icons.login),
-                          label: const Text(
-                            '加入房间',
-                            style: TextStyle(fontSize: 18),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.blue[700],
-                            side: BorderSide(
-                              color: Colors.blue[700]!,
-                              width: 2,
+                    ),
+                    const SizedBox(height: 32),
+
+                    // 按钮
+                    Container(
+                      constraints: const BoxConstraints(maxWidth: 400),
+                      child: Column(
+                        children: [
+                          SizedBox(
+                            width: double.infinity,
+                            height: 56,
+                            child: FilledButton.icon(
+                              onPressed: _createRoom,
+                              icon: const Icon(Icons.add_circle_outline),
+                              label: Text(
+                                '创建房间',
+                                style: textTheme.titleMedium?.copyWith(
+                                  color: colorScheme.onPrimary,
+                                ),
+                              ),
                             ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                          ),
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 56,
+                            child: OutlinedButton.icon(
+                              onPressed: _joinRoom,
+                              icon: const Icon(Icons.login),
+                              label: Text('加入房间', style: textTheme.titleMedium),
                             ),
                           ),
-                        ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -198,6 +182,23 @@ class _QuizHomeScreenState extends State<QuizHomeScreen> {
       MaterialPageRoute(
         builder: (context) => QuizClientScreen(playerName: name),
       ),
+    );
+  }
+}
+
+/// Shuffle 图标按钮组件
+class _ShuffleIconButton extends StatelessWidget {
+  const _ShuffleIconButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      icon: const Icon(Icons.shuffle),
+      onPressed: () {
+        final state = context.findAncestorStateOfType<_QuizHomeScreenState>();
+        state?._generateNewNickname();
+      },
+      tooltip: '生成随机昵称',
     );
   }
 }

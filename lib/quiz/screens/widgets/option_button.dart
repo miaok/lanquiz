@@ -39,38 +39,48 @@ class OptionButton extends StatelessWidget {
   Widget _buildSingleChoiceOption() {
     final isSelected = selectedAnswer == index;
 
-    Color? backgroundColor;
-    Color? borderColor;
+    return Builder(
+      builder: (context) {
+        final colorScheme = Theme.of(context).colorScheme;
+        final textTheme = Theme.of(context).textTheme;
 
-    if (isSelected) {
-      // 已选择但未提交或已提交
-      backgroundColor = Colors.blue[100];
-      borderColor = Colors.blue;
-    }
+        Color? backgroundColor;
+        Color? borderColor;
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 18),
-      child: OutlinedButton(
-        onPressed: hasAnswered || isSelected ? null : onSelectSingle,
-        style: OutlinedButton.styleFrom(
-          backgroundColor: backgroundColor,
-          side: BorderSide(color: borderColor ?? Colors.grey, width: 2),
-          padding: const EdgeInsets.all(16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                question.options[index],
-                style: const TextStyle(fontSize: 20, color: Colors.black87),
+        if (isSelected) {
+          // 已选择但未提交或已提交
+          backgroundColor = colorScheme.primaryContainer;
+          borderColor = colorScheme.primary;
+        }
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 18),
+          child: OutlinedButton(
+            onPressed: hasAnswered || isSelected ? null : onSelectSingle,
+            style: OutlinedButton.styleFrom(
+              backgroundColor: backgroundColor,
+              side: BorderSide(
+                color: borderColor ?? colorScheme.outline,
+                width: 2,
               ),
+              padding: const EdgeInsets.all(16),
             ),
-          ],
-        ),
-      ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    question.options[index],
+                    style: textTheme.bodyLarge?.copyWith(
+                      color: colorScheme.onSurface,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -78,37 +88,46 @@ class OptionButton extends StatelessWidget {
   Widget _buildMultipleChoiceOption() {
     final isSelected = selectedAnswers.contains(index);
 
-    Color? backgroundColor;
-    Color? borderColor;
+    return Builder(
+      builder: (context) {
+        final colorScheme = Theme.of(context).colorScheme;
+        final textTheme = Theme.of(context).textTheme;
 
-    if (isSelected) {
-      backgroundColor = Colors.blue[100];
-      borderColor = Colors.blue;
-    }
+        Color? backgroundColor;
+        Color? borderColor;
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: OutlinedButton(
-        onPressed: hasAnswered ? null : onToggleMultiple,
-        style: OutlinedButton.styleFrom(
-          backgroundColor: backgroundColor,
-          side: BorderSide(color: borderColor ?? Colors.grey, width: 2),
-          padding: const EdgeInsets.all(16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                question.options[index],
-                style: const TextStyle(fontSize: 16, color: Colors.black87),
+        if (isSelected) {
+          backgroundColor = colorScheme.primaryContainer;
+          borderColor = colorScheme.primary;
+        }
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: OutlinedButton(
+            onPressed: hasAnswered ? null : onToggleMultiple,
+            style: OutlinedButton.styleFrom(
+              backgroundColor: backgroundColor,
+              side: BorderSide(
+                color: borderColor ?? colorScheme.outline,
+                width: 2,
               ),
+              padding: const EdgeInsets.all(16),
             ),
-          ],
-        ),
-      ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    question.options[index],
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurface,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

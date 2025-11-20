@@ -105,6 +105,9 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     // 按分数排序
     final sortedPlayers = List<QuizPlayer>.from(widget.room.players);
     sortedPlayers.sort((a, b) => b.score.compareTo(a.score));
@@ -112,10 +115,7 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('游戏结果'),
-        backgroundColor: const Color(0xFF1976D2),
-        foregroundColor: Colors.white,
         automaticallyImplyLeading: false,
-        elevation: 0,
         centerTitle: true,
       ),
       body: SafeArea(
@@ -128,7 +128,7 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
             // 分隔线
             Container(
               height: 1,
-              color: Colors.grey[300],
+              color: colorScheme.outlineVariant,
               margin: const EdgeInsets.symmetric(horizontal: 16),
             ),
 
@@ -137,13 +137,13 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: Row(
                 children: [
-                  Icon(Icons.leaderboard, color: Colors.blue[700], size: 24),
+                  Icon(Icons.leaderboard, color: colorScheme.primary, size: 24),
                   const SizedBox(width: 8),
                   Text(
                     '查看错题',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    style: textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: Colors.blue[700],
+                      color: colorScheme.primary,
                     ),
                   ),
                 ],
@@ -171,15 +171,12 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
                     SizedBox(
                       width: double.infinity,
                       height: 56,
-                      child: ElevatedButton(
+                      child: FilledButton(
                         onPressed: _restartGame,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
+                        style: FilledButton.styleFrom(
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          elevation: 2,
                         ),
                         child: const Text(
                           '再来一局',
@@ -194,7 +191,7 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
                   SizedBox(
                     width: double.infinity,
                     height: 56,
-                    child: ElevatedButton(
+                    child: FilledButton.tonal(
                       onPressed: () async {
                         // 如果是房主且点击返回主页,应该关闭服务
                         if (widget.isHost) {
@@ -213,13 +210,10 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
                           (route) => false,
                         );
                       },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1976D2),
-                        foregroundColor: Colors.white,
+                      style: FilledButton.styleFrom(
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        elevation: 2,
                       ),
                       child: const Text('返回主页', style: TextStyle(fontSize: 18)),
                     ),
@@ -375,6 +369,8 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
   }
 
   Widget _buildRankItem(QuizPlayer player, int rank) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     Color? medalColor;
     IconData? medalIcon;
     Color rankColor;
@@ -392,8 +388,8 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
       medalIcon = Icons.emoji_events;
       rankColor = const Color(0xFF6D4C41);
     } else {
-      medalColor = Colors.blue[100];
-      rankColor = Colors.blue[700]!;
+      medalColor = colorScheme.primaryContainer;
+      rankColor = colorScheme.primary;
     }
 
     final hasWrongAnswers = player.wrongAnswers.isNotEmpty;
@@ -441,7 +437,7 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
             style: TextStyle(
               fontSize: 18,
               fontWeight: rank <= 3 ? FontWeight.bold : FontWeight.normal,
-              color: Colors.grey[800],
+              color: colorScheme.onSurface,
             ),
           ),
           trailing: Row(
@@ -453,11 +449,11 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: rank <= 3 ? rankColor : Colors.blue[100],
+                  color: rank <= 3 ? rankColor : colorScheme.primaryContainer,
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: (rank <= 3 ? rankColor : Colors.blue[100]!).withValues(alpha: 0.3),
+                      color: (rank <= 3 ? rankColor : colorScheme.primaryContainer).withValues(alpha: 0.3),
                       blurRadius: 4,
                       offset: const Offset(0, 2),
                     ),
@@ -468,7 +464,7 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: rank <= 3 ? Colors.white : Colors.blue[700],
+                    color: rank <= 3 ? Colors.white : colorScheme.primary,
                   ),
                 ),
               ),
@@ -477,12 +473,12 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
                 Container(
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    color: Colors.red[100],
+                    color: colorScheme.errorContainer,
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
                     Icons.expand_more,
-                    color: Colors.red[600],
+                    color: colorScheme.error,
                     size: 20,
                   ),
                 ),
@@ -495,9 +491,9 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
                 margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.grey[50],
+                  color: colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey[200]!),
+                  border: Border.all(color: colorScheme.outlineVariant),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -506,7 +502,7 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
                       children: [
                         Icon(
                           Icons.error_outline,
-                          color: Colors.red[600],
+                          color: colorScheme.error,
                           size: 20,
                         ),
                         const SizedBox(width: 8),
@@ -514,7 +510,7 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
                           '错题回顾',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            color: Colors.red[600],
+                            color: colorScheme.error,
                             fontSize: 16,
                           ),
                         ),
@@ -534,6 +530,8 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
   }
 
   Widget _buildWrongAnswerItem(Map<String, dynamic> wrongAnswer) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     final questionId = wrongAnswer['questionId'] as String;
     final playerAnswer = wrongAnswer['playerAnswer'];
     final correctAnswer = wrongAnswer['correctAnswer'];
@@ -551,9 +549,9 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.grey[100],
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey[300]!),
+        border: Border.all(color: colorScheme.outlineVariant),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -591,12 +589,12 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
           const SizedBox(height: 8),
           Row(
             children: [
-              const Text('你的答案: ', style: TextStyle(color: Colors.grey)),
+              Text('你的答案: ', style: TextStyle(color: colorScheme.outline)),
               Expanded(
                 child: Text(
                   playerAnswerText,
-                  style: const TextStyle(
-                    color: Colors.red,
+                  style: TextStyle(
+                    color: colorScheme.error,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -606,12 +604,12 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
           const SizedBox(height: 4),
           Row(
             children: [
-              const Text('正确答案: ', style: TextStyle(color: Colors.grey)),
+              Text('正确答案: ', style: TextStyle(color: colorScheme.outline)),
               Expanded(
                 child: Text(
                   correctAnswerText,
-                  style: const TextStyle(
-                    color: Colors.green,
+                  style: TextStyle(
+                    color: colorScheme.primary,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -624,13 +622,14 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
   }
 
   Color _getTypeColor(QuestionType type) {
+    final colorScheme = Theme.of(context).colorScheme;
     switch (type) {
       case QuestionType.singleChoice:
-        return Colors.blue;
+        return colorScheme.primary;
       case QuestionType.trueFalse:
-        return Colors.orange;
+        return colorScheme.tertiary;
       case QuestionType.multipleChoice:
-        return Colors.purple;
+        return colorScheme.secondary;
     }
   }
 

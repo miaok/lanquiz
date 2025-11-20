@@ -95,7 +95,7 @@ class _QuizGameScreenState extends State<QuizGameScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('玩家 $playerName 已断开连接'),
-                backgroundColor: Colors.orange,
+                backgroundColor: Theme.of(context).colorScheme.error,
               ),
             );
           }
@@ -107,9 +107,9 @@ class _QuizGameScreenState extends State<QuizGameScreen> {
       ) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('与主机断开连接'),
-              backgroundColor: Colors.red,
+            SnackBar(
+              content: const Text('与主机断开连接'),
+              backgroundColor: Theme.of(context).colorScheme.error,
             ),
           );
           Navigator.popUntil(context, (route) => route.isFirst);
@@ -201,9 +201,8 @@ class _QuizGameScreenState extends State<QuizGameScreen> {
         appBar: AppBar(
           title: Text(
             '第 ${myPlayer.currentQuestionIndex + 1}/${_room!.questions.length} 题',
+            style: Theme.of(context).textTheme.titleLarge,
           ),
-          backgroundColor: Colors.blue[700],
-          foregroundColor: Colors.white,
           automaticallyImplyLeading: false,
         ),
         body: Stack(
@@ -283,8 +282,11 @@ class _QuizGameScreenState extends State<QuizGameScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('退出游戏'),
-        content: const Text('确定要退出游戏吗？游戏进度将会丢失。'),
+        title: Text('退出游戏', style: Theme.of(context).textTheme.titleLarge),
+        content: Text(
+          '确定要退出游戏吗？游戏进度将会丢失。',
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -295,7 +297,10 @@ class _QuizGameScreenState extends State<QuizGameScreen> {
               Navigator.pop(context); // 关闭对话框
               Navigator.of(context).popUntil((route) => route.isFirst); // 返回主页
             },
-            child: const Text('退出', style: TextStyle(color: Colors.red)),
+            child: Text(
+              '退出',
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
           ),
         ],
       ),

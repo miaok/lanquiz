@@ -14,8 +14,11 @@ class QuestionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return Card(
-      color: Colors.blue[100],
+      color: colorScheme.primaryContainer,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -34,15 +37,13 @@ class QuestionCard extends StatelessWidget {
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color: _getTypeColor(questionType),
+                        color: _getTypeColor(questionType, colorScheme),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         questionType.label,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
+                        style: textTheme.labelMedium?.copyWith(
+                          color: colorScheme.onPrimary,
                         ),
                       ),
                     ),
@@ -50,10 +51,8 @@ class QuestionCard extends StatelessWidget {
                   // 题目文本
                   TextSpan(
                     text: questionText,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+                    style: textTheme.titleLarge?.copyWith(
+                      color: colorScheme.onPrimaryContainer,
                     ),
                   ),
                 ],
@@ -65,14 +64,14 @@ class QuestionCard extends StatelessWidget {
     );
   }
 
-  Color _getTypeColor(QuestionType type) {
+  Color _getTypeColor(QuestionType type, ColorScheme colorScheme) {
     switch (type) {
       case QuestionType.singleChoice:
-        return Colors.blue;
+        return colorScheme.primary;
       case QuestionType.trueFalse:
-        return Colors.orange;
+        return colorScheme.secondary;
       case QuestionType.multipleChoice:
-        return Colors.purple;
+        return colorScheme.tertiary;
     }
   }
 }

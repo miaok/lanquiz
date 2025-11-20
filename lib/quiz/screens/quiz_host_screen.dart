@@ -122,7 +122,7 @@ class _QuizHostScreenState extends State<QuizHostScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('玩家 $playerName 已断开连接'),
-            backgroundColor: Colors.orange,
+            backgroundColor: Theme.of(context).colorScheme.errorContainer,
           ),
         );
       }
@@ -145,6 +145,9 @@ class _QuizHostScreenState extends State<QuizHostScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     if (!_isInitialized || _room == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
@@ -166,7 +169,7 @@ class _QuizHostScreenState extends State<QuizHostScreen> {
               ),
               TextButton(
                 onPressed: () => Navigator.pop(context, true),
-                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                style: TextButton.styleFrom(foregroundColor: colorScheme.error),
                 child: const Text('确定'),
               ),
             ],
@@ -184,11 +187,7 @@ class _QuizHostScreenState extends State<QuizHostScreen> {
         }
       },
       child: Scaffold(
-        appBar: AppBar(
-          title: Text(_room!.name),
-          backgroundColor: Colors.blue[700],
-          foregroundColor: Colors.white,
-        ),
+        appBar: AppBar(title: Text(_room!.name)),
         body: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(4),
@@ -204,6 +203,7 @@ class _QuizHostScreenState extends State<QuizHostScreen> {
                       children: [
                         // 判断题数量
                         _buildQuestionCountSetting(
+                          context: context,
                           label: '判断题',
                           count: _trueFalseCount,
                           onChanged: (value) {
@@ -214,11 +214,12 @@ class _QuizHostScreenState extends State<QuizHostScreen> {
                             _updateRoomQuestions();
                           },
                           icon: Icons.check_circle_outline,
-                          color: Colors.blue,
+                          color: colorScheme.primary,
                         ),
                         const SizedBox(height: 12),
                         // 单选题数量
                         _buildQuestionCountSetting(
+                          context: context,
                           label: '单选题',
                           count: _singleChoiceCount,
                           onChanged: (value) {
@@ -229,11 +230,12 @@ class _QuizHostScreenState extends State<QuizHostScreen> {
                             _updateRoomQuestions();
                           },
                           icon: Icons.radio_button_checked,
-                          color: Colors.green,
+                          color: colorScheme.secondary,
                         ),
                         const SizedBox(height: 12),
                         // 多选题数量
                         _buildQuestionCountSetting(
+                          context: context,
                           label: '多选题',
                           count: _multipleChoiceCount,
                           onChanged: (value) {
@@ -244,7 +246,7 @@ class _QuizHostScreenState extends State<QuizHostScreen> {
                             _updateRoomQuestions();
                           },
                           icon: Icons.checklist,
-                          color: Colors.orange,
+                          color: colorScheme.tertiary,
                         ),
                         const SizedBox(height: 12),
                         // 快捷设置按钮
@@ -321,12 +323,12 @@ class _QuizHostScreenState extends State<QuizHostScreen> {
                               return ListTile(
                                 leading: CircleAvatar(
                                   backgroundColor: player.isReady
-                                      ? Colors.green
-                                      : Colors.grey,
-                                  child: Text(
-                                    player.name[0].toUpperCase(),
-                                    style: const TextStyle(color: Colors.white),
-                                  ),
+                                      ? colorScheme.primaryContainer
+                                      : colorScheme.surfaceContainerHighest,
+                                  foregroundColor: player.isReady
+                                      ? colorScheme.onPrimaryContainer
+                                      : colorScheme.onSurfaceVariant,
+                                  child: Text(player.name[0].toUpperCase()),
                                 ),
                                 title: Text(player.name),
                                 subtitle: Text(
@@ -337,8 +339,8 @@ class _QuizHostScreenState extends State<QuizHostScreen> {
                                       ? Icons.check_circle
                                       : Icons.circle_outlined,
                                   color: player.isReady
-                                      ? Colors.green
-                                      : Colors.grey,
+                                      ? colorScheme.primary
+                                      : colorScheme.onSurfaceVariant,
                                 ),
                               );
                             },
@@ -353,21 +355,17 @@ class _QuizHostScreenState extends State<QuizHostScreen> {
                 // 开始游戏按钮
                 SizedBox(
                   height: 56,
-                  child: ElevatedButton(
+                  child: FilledButton(
                     onPressed: _room!.allPlayersReady ? _startGame : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor: Colors.grey[300],
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
                     child: Text(
                       _room!.allPlayersReady
                           ? '开始游戏'
                           : '等待所有玩家准备 (${_room!.players.where((p) => p.isReady).length}/${_room!.players.length})',
-                      style: const TextStyle(fontSize: 18),
+                      style: textTheme.titleMedium?.copyWith(
+                        color: _room!.allPlayersReady
+                            ? colorScheme.onPrimary
+                            : null, // disabled 状态使用默认颜色
+                      ),
                     ),
                   ),
                 ),
@@ -442,6 +440,7 @@ class _QuizHostScreenState extends State<QuizHostScreen> {
 
   /// 构建题型数量设置控件
   Widget _buildQuestionCountSetting({
+    required BuildContext context,
     required String label,
     required int count,
     required ValueChanged<int> onChanged,

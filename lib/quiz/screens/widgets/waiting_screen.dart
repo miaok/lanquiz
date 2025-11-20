@@ -30,9 +30,7 @@ class WaitingScreen extends StatelessWidget {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('等待其他玩家'),
-          backgroundColor: Colors.green[700],
-          foregroundColor: Colors.white,
+          title: Text('等待其他玩家', style: Theme.of(context).textTheme.titleLarge),
           automaticallyImplyLeading: false,
         ),
         body: SafeArea(
@@ -58,24 +56,25 @@ class WaitingScreen extends StatelessWidget {
                         Icon(
                           Icons.check_circle_outline,
                           size: 100,
-                          color: Colors.green[600],
+                          color: Theme.of(context).colorScheme.tertiary,
                         ),
                         const SizedBox(height: 24),
                         Text(
                           '你已完成所有题目！',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green[700],
-                          ),
+                          style: Theme.of(context).textTheme.headlineMedium
+                              ?.copyWith(
+                                color: Theme.of(context).colorScheme.tertiary,
+                              ),
                         ),
                         const SizedBox(height: 16),
                         Text(
                           '等待其他玩家完成答题...',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey[600],
-                          ),
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
                         ),
                         const SizedBox(height: 32),
                         Card(
@@ -121,22 +120,28 @@ class WaitingScreen extends StatelessWidget {
                                           Icon(
                                             Icons.person,
                                             size: 16,
-                                            color: Colors.orange[600],
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.secondary,
                                           ),
                                           const SizedBox(width: 8),
                                           Text(
                                             player.name,
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                            ),
+                                            style: Theme.of(
+                                              context,
+                                            ).textTheme.labelLarge,
                                           ),
                                           const SizedBox(width: 8),
                                           Text(
                                             '第 ${player.currentQuestionIndex + 1} 题',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.grey[600],
-                                            ),
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodySmall
+                                                ?.copyWith(
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .onSurfaceVariant,
+                                                ),
                                           ),
                                         ],
                                       ),

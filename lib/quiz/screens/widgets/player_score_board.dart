@@ -293,11 +293,11 @@ class _AnimatedMetricBarState extends State<_AnimatedMetricBar>
     if (isScore) {
       // 得分进度条：金色系
       if (isCorrect && _answerController.isAnimating) {
-        return const Color(0xFFFFD700); // 金色
+        return const Color.fromARGB(255, 255, 215, 0); // 金色
       } else if (isIncorrect && _answerController.isAnimating) {
-        return const Color(0xFF6B7280); // 灰色
+        return const Color.fromARGB(255, 145, 116, 53); // 灰色
       } else {
-        return const Color(0xFFFFA500); // 橙色
+        return const Color.fromARGB(255, 224, 67, 9); // 橙色
       }
     } else {
       // 题目进度条:蓝绿色系
@@ -406,10 +406,12 @@ class _MirroredProgressBarState extends State<_MirroredProgressBar>
         ? _progressAnimation.value
         : widget.progress;
 
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
       height: widget.height,
       decoration: BoxDecoration(
-        color: Colors.grey.withValues(alpha: 0.1),
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(8), // 稍微圆角
       ),
       child: ClipRRect(
@@ -436,19 +438,27 @@ class _MirroredProgressBarState extends State<_MirroredProgressBar>
             if (widget.label != null)
               Positioned.fill(
                 child: Center(
-                  child: Text(
-                    widget.label!,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Color.fromARGB(73, 170, 166, 166),
-                      shadows: [
-                        Shadow(
-                          //offset: Offset(0, 1),
-                          blurRadius: 1,
-                          color: Color.fromARGB(247, 0, 0, 0),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    child: Text(
+                      widget.label!,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: _getAdaptiveTextColor(
+                          widget.color,
+                          colorScheme,
                         ),
-                      ],
+                        shadows: [
+                          Shadow(
+                            blurRadius: _getShadowBlurRadius(widget.color),
+                            color: _getShadowColor(
+                              widget.color,
+                              colorScheme,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -457,5 +467,46 @@ class _MirroredProgressBarState extends State<_MirroredProgressBar>
         ),
       ),
     );
+  }
+
+  /// 根据背景色自适应文本颜色
+  Color _getAdaptiveTextColor(Color backgroundColor, ColorScheme colorScheme) {
+    // 计算亮度决定使用深色还是浅色文本
+    final luminance = backgroundColor.computeLuminance();
+    
+    // 深色背景使用浅色文本，浅色背景使用深色文本
+    if (luminance < 0.5) {
+      // 深色背景
+      return colorScheme.surface;
+    } else {
+      // 浅色背景
+      return colorScheme.onSurface;
+    }
+  }
+
+  /// 获取自适应阴影颜色
+  Color _getShadowColor(Color backgroundColor, ColorScheme colorScheme) {
+    final luminance = backgroundColor.computeLuminance();
+    
+    if (luminance < 0.5) {
+      // 深色背景，使用浅色阴影
+      return Colors.white.withValues(alpha: 0.5);
+    } else {
+      // 浅色背景，使用深色阴影
+      return Colors.black.withValues(alpha: 0.3);
+    }
+  }
+
+  /// 获取自适应阴影模糊半径
+  double _getShadowBlurRadius(Color backgroundColor) {
+    final luminance = backgroundColor.computeLuminance();
+    
+    if (luminance < 0.3 || luminance > 0.7) {
+      // 极端颜色（非常深或非常浅）使用更明显的阴影
+      return 2;
+    } else {
+      // 中等颜色使用适中的阴影
+      return 1;
+    }
   }
 }

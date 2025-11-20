@@ -15,18 +15,21 @@ class ConfirmButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ElevatedButton(
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return FilledButton(
       onPressed: selectedCount == 0 ? null : onConfirm,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.green,
-        foregroundColor: Colors.white,
-        disabledBackgroundColor: Colors.grey,
+      style: FilledButton.styleFrom(
+        backgroundColor: colorScheme.tertiary,
+        disabledBackgroundColor: colorScheme.surfaceContainerHighest,
         padding: const EdgeInsets.all(16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
       child: Text(
         '确认答案 ($selectedCount/$totalCount)',
-        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        style: textTheme.labelLarge?.copyWith(
+          color: selectedCount == 0 ? null : colorScheme.onTertiary,
+        ),
       ),
     );
   }
