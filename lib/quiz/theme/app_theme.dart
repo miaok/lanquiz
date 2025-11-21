@@ -10,89 +10,79 @@ class AppTheme {
   /// 浅色主题色彩方案
   static const ColorScheme _lightColorScheme = ColorScheme(
     brightness: Brightness.light,
-    // 主要色彩 - 用于主要组件和高优先级操作
-    primary: Color(0xFF1565C0), // 深蓝色
-    onPrimary: Color(0xFFFFFFFF), // 主要色彩上的文字/图标
-    primaryContainer: Color(0xFFBBDEFB), // 主要色彩容器
-    onPrimaryContainer: Color(0xFF003D75), // 主要色彩容器上的文字
-    // 次要色彩 - 用于次要组件和中等优先级操作
-    secondary: Color(0xFF7C4DFF), // 紫色
-    onSecondary: Color(0xFFFFFFFF),
-    secondaryContainer: Color(0xFFE1BEE7),
-    onSecondaryContainer: Color(0xFF4A148C),
-
-    // 第三色彩 - 用于对比和强调
-    tertiary: Color(0xFF00BFA5), // 青绿色
-    onTertiary: Color(0xFFFFFFFF),
-    tertiaryContainer: Color(0xFFB2DFDB),
-    onTertiaryContainer: Color(0xFF004D40),
-
-    // 错误色彩
-    error: Color(0xFFD32F2F),
-    onError: Color(0xFFFFFFFF),
-    errorContainer: Color(0xFFFFCDD2),
-    onErrorContainer: Color(0xFFB71C1C),
-
-    // 背景色彩
-    surface: Color(0xFFFAFAFA), // 表面
-    onSurface: Color(0xFF1A1A1A), // 表面上的文字
-    surfaceContainerHighest: Color(0xFFE3E3E3), // 最高表面容器（卡片等）
-    onSurfaceVariant: Color(0xFF5F5F5F), // 表面变体上的文字
+    // 主要色彩 - 深绿色系,用于主要组件和高优先级操作
+    primary: Color(0xFF255E40), // 深绿色 - 主题色
+    onPrimary: Color(0xFFFFFFFF), // 主要色彩上的文字/图标 - 白色
+    primaryContainer: Color(0xFFA8DAC1), // 浅绿色容器 - 柔和的绿色背景
+    onPrimaryContainer: Color(0xFF002110), // 主要色彩容器上的文字 - 深绿黑色
+    // 次要色彩 - 琥珀金色系,用于次要组件和中等优先级操作
+    secondary: Color(0xFFFF8F00), // 琥珀金色 - 暖色调对比
+    onSecondary: Color(0xFFFFFFFF), // 次要色彩上的文字 - 白色
+    secondaryContainer: Color(0xFFFFE0B2), // 浅琥珀色容器
+    onSecondaryContainer: Color(0xFF4A2800), // 次要色彩容器上的文字 - 深棕色
+    // 第三色彩 - 青蓝色系,用于对比和强调
+    tertiary: Color(0xFF0288D1), // 青蓝色 - 冷色调补充
+    onTertiary: Color(0xFFFFFFFF), // 第三色彩上的文字 - 白色
+    tertiaryContainer: Color(0xFFB3E5FC), // 浅青蓝色容器
+    onTertiaryContainer: Color(0xFF01579B), // 第三色彩容器上的文字 - 深蓝色
+    // 错误色彩 - 红色系
+    error: Color(0xFFD32F2F), // 错误红色
+    onError: Color(0xFFFFFFFF), // 错误色上的文字 - 白色
+    errorContainer: Color(0xFFFFCDD2), // 浅红色容器
+    onErrorContainer: Color(0xFFB71C1C), // 错误容器上的文字 - 深红色
+    // 背景色彩 - 中性色系
+    surface: Color(0xFFFBFDF9), // 表面 - 微绿色调的白色
+    onSurface: Color(0xFF191C1A), // 表面上的文字 - 深灰绿色
+    surfaceContainerHighest: Color(0xFFE0E3E0), // 最高表面容器(卡片等) - 浅灰绿色
+    onSurfaceVariant: Color(0xFF404943), // 表面变体上的文字 - 中灰绿色
     // 轮廓色彩
-    outline: Color(0xFFBDBDBD),
-    outlineVariant: Color(0xFFE0E0E0),
-
+    outline: Color(0xFF70796F), // 轮廓线 - 中灰绿色
+    outlineVariant: Color(0xFFC0C9BE), // 轮廓变体 - 浅灰绿色
     // 其他
-    shadow: Color(0xFF000000),
-    scrim: Color(0xFF000000),
-    inverseSurface: Color(0xFF2C2C2C),
-    onInverseSurface: Color(0xFFF5F5F5),
-    inversePrimary: Color(0xFF90CAF9),
+    shadow: Color(0xFF000000), // 阴影 - 黑色
+    scrim: Color(0xFF000000), // 遮罩 - 黑色
+    inverseSurface: Color(0xFF2E312E), // 反转表面 - 深灰绿色
+    onInverseSurface: Color(0xFFF0F1ED), // 反转表面上的文字 - 浅灰色
+    inversePrimary: Color(0xFF8DBE9F), // 反转主色 - 亮绿色
   );
 
   /// 深色主题色彩方案
   static const ColorScheme _darkColorScheme = ColorScheme(
     brightness: Brightness.dark,
-    // 主要色彩
-    primary: Color.fromARGB(255, 23, 49, 71), // 亮蓝色
-    onPrimary: Color.fromARGB(255, 61, 119, 174),
-    primaryContainer: Color(0xFF0D47A1),
-    onPrimaryContainer: Color(0xFFD7E8FF),
-
-    // 次要色彩
-    secondary: Color(0xFFB39DDB), // 亮紫色
-    onSecondary: Color(0xFF4A148C),
-    secondaryContainer: Color(0xFF6A1B9A),
-    onSecondaryContainer: Color(0xFFF3E5F5),
-
-    // 第三色彩
-    tertiary: Color(0xFF80CBC4), // 亮青绿色
-    onTertiary: Color(0xFF004D40),
-    tertiaryContainer: Color(0xFF00695C),
-    onTertiaryContainer: Color(0xFFE0F2F1),
-
-    // 错误色彩
-    error: Color(0xFFEF5350),
-    onError: Color(0xFF601410),
-    errorContainer: Color(0xFFC62828),
-    onErrorContainer: Color(0xFFFFDAD6),
-
-    // 背景色彩
-    surface: Color(0xFF121212), // 深色背景
-    onSurface: Color(0xFFE3E3E3),
-    surfaceContainerHighest: Color(0xFF2C2C2C), // 卡片背景
-    onSurfaceVariant: Color(0xFFBDBDBD),
-
+    // 主要色彩 - 亮绿色系,在深色背景上更醒目
+    primary: Color(0xFF8DBE9F), // 亮绿色 - 深色模式主色
+    onPrimary: Color(0xFF003920), // 主要色彩上的文字 - 深绿色
+    primaryContainer: Color(0xFF00522E), // 深绿色容器
+    onPrimaryContainer: Color(0xFFA8DAC1), // 主要色彩容器上的文字 - 浅绿色
+    // 次要色彩 - 亮琥珀金色系
+    secondary: Color(0xFFFFB74D), // 亮琥珀金色 - 深色模式次要色
+    onSecondary: Color(0xFF3E2723), // 次要色彩上的文字 - 深棕色
+    secondaryContainer: Color(0xFFE65100), // 深琥珀色容器
+    onSecondaryContainer: Color(0xFFFFE0B2), // 次要色彩容器上的文字 - 浅琥珀色
+    // 第三色彩 - 亮青蓝色系
+    tertiary: Color(0xFF4FC3F7), // 亮青蓝色 - 深色模式第三色
+    onTertiary: Color(0xFF003C5A), // 第三色彩上的文字 - 深蓝色
+    tertiaryContainer: Color(0xFF006494), // 深青蓝色容器
+    onTertiaryContainer: Color(0xFFB3E5FC), // 第三色彩容器上的文字 - 浅青蓝色
+    // 错误色彩 - 亮红色系
+    error: Color(0xFFEF5350), // 亮错误红色
+    onError: Color(0xFF601410), // 错误色上的文字 - 深红色
+    errorContainer: Color(0xFFC62828), // 深红色容器
+    onErrorContainer: Color(0xFFFFDAD6), // 错误容器上的文字 - 浅红色
+    // 背景色彩 - 深色中性色系
+    surface: Color(0xFF191C1A), // 表面 - 深灰绿色背景
+    onSurface: Color(0xFFE0E3E0), // 表面上的文字 - 浅灰绿色
+    surfaceContainerHighest: Color(0xFF2E312E), // 最高表面容器(卡片等) - 中灰绿色
+    onSurfaceVariant: Color(0xFFC0C9BE), // 表面变体上的文字 - 浅灰绿色
     // 轮廓色彩
-    outline: Color(0xFF616161),
-    outlineVariant: Color(0xFF424242),
-
+    outline: Color(0xFF8A938A), // 轮廓线 - 中灰绿色
+    outlineVariant: Color(0xFF404943), // 轮廓变体 - 深灰绿色
     // 其他
-    shadow: Color(0xFF000000),
-    scrim: Color(0xFF000000),
-    inverseSurface: Color(0xFFE3E3E3),
-    onInverseSurface: Color(0xFF2C2C2C),
-    inversePrimary: Color(0xFF1565C0),
+    shadow: Color(0xFF000000), // 阴影 - 黑色
+    scrim: Color(0xFF000000), // 遮罩 - 黑色
+    inverseSurface: Color(0xFFE0E3E0), // 反转表面 - 浅灰绿色
+    onInverseSurface: Color(0xFF191C1A), // 反转表面上的文字 - 深灰绿色
+    inversePrimary: Color(0xFF255E40), // 反转主色 - 深绿色
   );
 
   // ============ 排版系统 ============

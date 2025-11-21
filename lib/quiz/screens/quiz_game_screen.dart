@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/quiz_room.dart';
 import '../models/question.dart';
+import '../models/player.dart';
 import '../services/quiz_host_service.dart';
 import '../services/quiz_client_service.dart';
 import 'quiz_result_screen.dart';
@@ -161,6 +162,46 @@ class _QuizGameScreenState extends State<QuizGameScreen> {
     }
   }
 
+  // 根据得分对比生成AppBar标题
+  String _getAppBarTitle(QuizPlayer myPlayer) {
+    if (_room == null) return '答题中...';
+
+    // 找到对手
+    final opponent = _room!.players.firstWhere(
+      (p) => p.id != _myPlayerId,
+      orElse: () => myPlayer, // 如果没有对手，返回自己
+    );
+
+    // 如果没有对手，只显示题目进度
+    if (opponent.id == myPlayer.id) {
+      return '自由练习';
+    }
+
+    // 计算得分占比
+    final total = myPlayer.score + opponent.score;
+    final myRatio = total > 0 ? myPlayer.score / total : 0.5;
+
+    // 根据占比生成状态文本
+    String statusText;
+    if (myRatio >= 0.7) {
+      statusText = '遥遥领先';
+    } else if (myRatio >= 0.6) {
+      statusText = '稳稳领先';
+    } else if (myRatio > 0.5) {
+      statusText = '略有优势';
+    } else if (myRatio == 0.5) {
+      statusText = '棋逢对手';
+    } else if (myRatio >= 0.4) {
+      statusText = '加油加油';
+    } else if (myRatio >= 0.3) {
+      statusText = '奋起直追';
+    } else {
+      statusText = '别放弃';
+    }
+
+    return statusText;
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_room == null) {
@@ -200,7 +241,7 @@ class _QuizGameScreenState extends State<QuizGameScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: Text(
-            '第 ${myPlayer.currentQuestionIndex + 1}/${_room!.questions.length} 题',
+            _getAppBarTitle(myPlayer),
             style: Theme.of(context).textTheme.titleLarge,
           ),
           automaticallyImplyLeading: false,
@@ -218,7 +259,6 @@ class _QuizGameScreenState extends State<QuizGameScreen> {
                     roomStatus: _room!.status,
                     totalQuestions: _room!.questions.length,
                   ),
-
                   // 题目区域
                   Expanded(
                     child: SingleChildScrollView(

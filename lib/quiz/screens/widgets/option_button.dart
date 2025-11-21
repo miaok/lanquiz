@@ -120,6 +120,7 @@ class OptionButton extends StatelessWidget {
                     question.options[index],
                     style: textTheme.bodyMedium?.copyWith(
                       color: colorScheme.onSurface,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),

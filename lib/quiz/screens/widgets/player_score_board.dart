@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import '../../models/quiz_room.dart';
 import '../../models/player.dart';
 
-/// 简化的玩家得分榜组件
-class PlayerScoreBoard extends StatefulWidget {
+/// 对抗式玩家得分榜组件
+class PlayerScoreBoard extends StatelessWidget {
   final List<QuizPlayer> players;
   final String myPlayerId;
   final String hostId;
@@ -20,446 +20,221 @@ class PlayerScoreBoard extends StatefulWidget {
   });
 
   @override
-  State<PlayerScoreBoard> createState() => _PlayerScoreBoardState();
-}
-
-class _PlayerScoreBoardState extends State<PlayerScoreBoard> {
-  // 用于追踪每个玩家的上一次答题结果,以触发动画
-  final Map<String, AnswerResult> _previousAnswerResults = {};
-
-  @override
   Widget build(BuildContext context) {
     // 找到房主和客户端玩家
-    final hostPlayer = widget.players.firstWhere(
-      (p) => p.id == widget.hostId,
-      orElse: () => widget.players.isNotEmpty
-          ? widget.players.first
+    final hostPlayer = players.firstWhere(
+      (p) => p.id == hostId,
+      orElse: () => players.isNotEmpty
+          ? players.first
           : QuizPlayer(id: 'temp', name: 'Host'),
     );
 
-    final clientPlayer = widget.players.firstWhere(
-      (p) => p.id != widget.hostId,
-      orElse: () => widget.players.length > 1 ? widget.players[1] : hostPlayer,
+    final clientPlayer = players.firstWhere(
+      (p) => p.id != hostId,
+      orElse: () => players.length > 1 ? players[1] : hostPlayer,
     );
 
-    final hasClient = widget.players.any((p) => p.id != widget.hostId);
-
-    // 计算最高分，用于进度条归一化
-    final maxScore = widget.players.isNotEmpty
-        ? widget.players.map((p) => p.score).reduce((a, b) => a > b ? a : b)
-        : 100;
-    // 避免除以0
-    final effectiveMaxScore = maxScore > 0 ? maxScore : 100;
+    final hasClient = players.any((p) => p.id != hostId);
 
     return Container(
       height: 80,
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
+      child: Column(
         children: [
-          // 左半区域：得分 (从左到右)
+          // 上方：得分对抗条
           Expanded(
-            child: Column(
-              children: [
-                // 上方：主机端得分
-                Expanded(
-                  child: _AnimatedMetricBar(
-                    key: ValueKey('host_score_${hostPlayer.id}'),
-                    player: hostPlayer,
-                    shouldAnimate: _shouldAnimate(hostPlayer),
-                    currentValue: hostPlayer.score,
-                    maxValue: effectiveMaxScore,
-                    isScore: true,
-                    isReversed: false, // 从左到右
-                    label: '${hostPlayer.name}: ${hostPlayer.score}',
-                  ),
-                ),
-                const SizedBox(height: 4),
-                // 下方：客户端得分
-                Expanded(
-                  child: hasClient
-                      ? _AnimatedMetricBar(
-                          key: ValueKey('client_score_${clientPlayer.id}'),
-                          player: clientPlayer,
-                          shouldAnimate: _shouldAnimate(clientPlayer),
-                          currentValue: clientPlayer.score,
-                          maxValue: effectiveMaxScore,
-                          isScore: true,
-                          isReversed: false, // 从左到右
-                          label: '${clientPlayer.name}: ${clientPlayer.score}',
-                        )
-                      : const SizedBox(),
-                ),
-              ],
+            child: _VersusBar(
+              player1Name: hostPlayer.name,
+              player1Value: hostPlayer.score,
+              player2Name: hasClient ? clientPlayer.name : '',
+              player2Value: hasClient ? clientPlayer.score : 0,
+              isScore: true,
+              hasOpponent: hasClient,
             ),
           ),
-
-          const SizedBox(width: 16), // 中间间距
-          // 右半区域：进度 (从右到左)
+          const SizedBox(height: 8),
+          // 下方：进度对抗条
           Expanded(
-            child: Column(
-              children: [
-                // 上方：主机端进度
-                Expanded(
-                  child: _AnimatedMetricBar(
-                    key: ValueKey('host_progress_${hostPlayer.id}'),
-                    player: hostPlayer,
-                    shouldAnimate: _shouldAnimate(hostPlayer),
-                    currentValue: hostPlayer.isFinished
-                        ? widget.totalQuestions
-                        : hostPlayer.currentQuestionIndex,
-                    maxValue: widget.totalQuestions,
-                    isScore: false,
-                    isReversed: true, // 从右到左
-                    label:
-                        '${hostPlayer.isFinished ? widget.totalQuestions : hostPlayer.currentQuestionIndex}/${widget.totalQuestions}',
-                  ),
-                ),
-                const SizedBox(height: 4),
-                // 下方：客户端进度
-                Expanded(
-                  child: hasClient
-                      ? _AnimatedMetricBar(
-                          key: ValueKey('client_progress_${clientPlayer.id}'),
-                          player: clientPlayer,
-                          shouldAnimate: _shouldAnimate(clientPlayer),
-                          currentValue: clientPlayer.isFinished
-                              ? widget.totalQuestions
-                              : clientPlayer.currentQuestionIndex,
-                          maxValue: widget.totalQuestions,
-                          isScore: false,
-                          isReversed: true, // 从右到左
-                          label:
-                              '${clientPlayer.isFinished ? widget.totalQuestions : clientPlayer.currentQuestionIndex}/${widget.totalQuestions}',
-                        )
-                      : const SizedBox(),
-                ),
-              ],
+            child: _VersusBar(
+              player1Name: hostPlayer.name,
+              player1Value: hostPlayer.isFinished
+                  ? totalQuestions
+                  : hostPlayer.currentQuestionIndex,
+              player2Name: hasClient ? clientPlayer.name : '',
+              player2Value: hasClient
+                  ? (clientPlayer.isFinished
+                        ? totalQuestions
+                        : clientPlayer.currentQuestionIndex)
+                  : 0,
+              isScore: false,
+              hasOpponent: hasClient,
+              maxValue: totalQuestions,
             ),
           ),
         ],
       ),
     );
   }
-
-  bool _shouldAnimate(QuizPlayer player) {
-    final previous = _previousAnswerResults[player.id];
-    final current = player.lastAnswerResult;
-
-    // 更新缓存
-    _previousAnswerResults[player.id] = current;
-
-    // 如果从none变为correct或incorrect,触发动画
-    return previous != current && current != AnswerResult.none;
-  }
 }
 
-/// 带有动画效果的单个指标条 (得分或进度)
-class _AnimatedMetricBar extends StatefulWidget {
-  final QuizPlayer player;
-  final bool shouldAnimate;
-  final int currentValue;
-  final int maxValue;
+/// 对抗式进度条组件（两个玩家从两端推进）
+class _VersusBar extends StatelessWidget {
+  final String player1Name;
+  final int player1Value;
+  final String player2Name;
+  final int player2Value;
   final bool isScore;
-  final bool isReversed;
-  final String label;
+  final bool hasOpponent;
+  final int? maxValue; // 用于进度条的最大值
 
-  const _AnimatedMetricBar({
-    super.key,
-    required this.player,
-    required this.shouldAnimate,
-    required this.currentValue,
-    required this.maxValue,
+  const _VersusBar({
+    required this.player1Name,
+    required this.player1Value,
+    required this.player2Name,
+    required this.player2Value,
     required this.isScore,
-    required this.isReversed,
-    required this.label,
+    required this.hasOpponent,
+    this.maxValue,
   });
 
   @override
-  State<_AnimatedMetricBar> createState() => _AnimatedMetricBarState();
-}
-
-class _AnimatedMetricBarState extends State<_AnimatedMetricBar>
-    with TickerProviderStateMixin {
-  late AnimationController _pulseController;
-  late AnimationController _answerController;
-
-  late Animation<double> _pulseAnimation;
-  late Animation<double> _scaleAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-
-    // 持续的呼吸动画
-    _pulseController = AnimationController(
-      duration: const Duration(milliseconds: 2000),
-      vsync: this,
-    )..repeat(reverse: true);
-
-    _pulseAnimation = Tween<double>(begin: 0.98, end: 1.02).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
-    );
-
-    // 答题反馈动画
-    final duration = _getAnimationDuration();
-    _answerController = AnimationController(duration: duration, vsync: this);
-
-    _scaleAnimation =
-        TweenSequence<double>([
-          TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.1), weight: 1),
-          TweenSequenceItem(tween: Tween(begin: 1.1, end: 1.0), weight: 1),
-        ]).animate(
-          CurvedAnimation(parent: _answerController, curve: Curves.easeInOut),
-        );
-  }
-
-  @override
-  void didUpdateWidget(_AnimatedMetricBar oldWidget) {
-    super.didUpdateWidget(oldWidget);
-
-    if (widget.shouldAnimate &&
-        widget.player.lastAnswerResult != AnswerResult.none) {
-      final newDuration = _getAnimationDuration();
-      if (_answerController.duration != newDuration) {
-        _answerController.duration = newDuration;
-      }
-      _triggerAnswerAnimation(widget.player.lastAnswerResult);
-    }
-  }
-
-  Duration _getAnimationDuration() {
-    final combo = widget.player.comboCount;
-    if (combo >= 6) {
-      return const Duration(milliseconds: 300);
-    } else if (combo >= 4) {
-      return const Duration(milliseconds: 500);
-    } else if (combo >= 2) {
-      return const Duration(milliseconds: 700);
-    } else {
-      return const Duration(milliseconds: 1000);
-    }
-  }
-
-  void _triggerAnswerAnimation(AnswerResult result) {
-    _answerController.forward(from: 0.0);
-  }
-
-  @override
-  void dispose() {
-    _pulseController.dispose();
-    _answerController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final isCorrect = widget.player.lastAnswerResult == AnswerResult.correct;
-    final isIncorrect =
-        widget.player.lastAnswerResult == AnswerResult.incorrect;
-
-    // 计算进度
-    final progress = widget.maxValue > 0
-        ? widget.currentValue / widget.maxValue
-        : 0.0;
-
-    // 获取颜色
-    final color = _getProgressColor(isCorrect, isIncorrect, widget.isScore);
-
-    return AnimatedBuilder(
-      animation: Listenable.merge([_pulseAnimation, _scaleAnimation]),
-      builder: (context, child) {
-        final scale = _answerController.isAnimating
-            ? _scaleAnimation.value
-            : _pulseAnimation.value;
-
-        return Transform.scale(
-          scale: scale,
-          child: _MirroredProgressBar(
-            progress: progress,
-            color: color,
-            height: double.infinity, // 填满父容器
-            animate: true,
-            duration: _getAnimationDuration(),
-            isReversed: widget.isReversed,
-            label: widget.label,
-          ),
-        );
-      },
-    );
-  }
-
-  Color _getProgressColor(bool isCorrect, bool isIncorrect, bool isScore) {
-    if (isScore) {
-      // 得分进度条：金色系
-      if (isCorrect && _answerController.isAnimating) {
-        return const Color.fromARGB(255, 255, 215, 0); // 金色
-      } else if (isIncorrect && _answerController.isAnimating) {
-        return const Color.fromARGB(255, 145, 116, 53); // 灰色
-      } else {
-        return const Color.fromARGB(255, 224, 67, 9); // 橙色
-      }
-    } else {
-      // 题目进度条:蓝绿色系
-      if (isCorrect && _answerController.isAnimating) {
-        return const Color(0xFF4ADE80); // 绿色
-      } else if (isIncorrect && _answerController.isAnimating) {
-        return const Color(0xFFEF4444); // 红色
-      } else {
-        return const Color(0xFF06B6D4); // 青色
-      }
-    }
-  }
-}
-
-/// 镜像对称进度条组件
-class _MirroredProgressBar extends StatefulWidget {
-  final double progress;
-  final Color color;
-  final double height;
-  final bool animate;
-  final Duration? duration;
-  final bool isReversed; // true for right-to-left, false for left-to-right
-  final String? label;
-
-  const _MirroredProgressBar({
-    //super.key,
-    required this.progress,
-    required this.color,
-    required this.height,
-    required this.animate,
-    this.duration,
-    required this.isReversed,
-    this.label,
-  });
-
-  @override
-  State<_MirroredProgressBar> createState() => _MirroredProgressBarState();
-}
-
-class _MirroredProgressBarState extends State<_MirroredProgressBar>
-    with TickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _progressAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-
-    if (widget.animate) {
-      _animationController = AnimationController(
-        duration: widget.duration ?? const Duration(milliseconds: 800),
-        vsync: this,
-      );
-
-      _progressAnimation = Tween<double>(begin: 0.0, end: widget.progress)
-          .animate(
-            CurvedAnimation(
-              parent: _animationController,
-              curve: Curves.easeOutQuart,
-            ),
-          );
-
-      _animationController.forward();
-    }
-  }
-
-  @override
-  void didUpdateWidget(_MirroredProgressBar oldWidget) {
-    super.didUpdateWidget(oldWidget);
-
-    if (widget.animate && widget.progress != oldWidget.progress) {
-      if (widget.duration != oldWidget.duration) {
-        _animationController.dispose();
-        _animationController = AnimationController(
-          duration: widget.duration ?? const Duration(milliseconds: 800),
-          vsync: this,
-        );
-      }
-
-      _progressAnimation =
-          Tween<double>(
-            begin: _animationController.value * oldWidget.progress,
-            end: widget.progress,
-          ).animate(
-            CurvedAnimation(
-              parent: _animationController,
-              curve: Curves.easeOutQuart,
-            ),
-          );
-
-      _animationController.forward(from: 0.0);
-    }
-  }
-
-  @override
-  void dispose() {
-    if (widget.animate) {
-      _animationController.dispose();
-    }
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final currentProgress = widget.animate
-        ? _progressAnimation.value
-        : widget.progress;
-
     final colorScheme = Theme.of(context).colorScheme;
 
+    // 计算两个玩家的占比
+    final total = player1Value + player2Value;
+    final player1Ratio = total > 0 ? player1Value / total : 0.5;
+    final player2Ratio = total > 0 ? player2Value / total : 0.5;
+
+    // 如果没有对手，玩家1占满整个进度条
+    final effectivePlayer1Ratio = hasOpponent ? player1Ratio : 1.0;
+    final effectivePlayer2Ratio = hasOpponent ? player2Ratio : 0.0;
+
+    // 获取颜色（基于玩家之间的相对优势）
+    // 使用占比作为饱和度的依据
+    final player1Color = _getColorByRatio(
+      player1Ratio,
+      isScore,
+      isPlayer1: true,
+    );
+    final player2Color = _getColorByRatio(
+      player2Ratio,
+      isScore,
+      isPlayer1: false,
+    );
+
+    // 生成标签（基于相对优势）
+    final player1Label = _getLabelByRatio(
+      player1Name,
+      player1Value,
+      player1Ratio,
+      isScore,
+      maxValue,
+    );
+    final player2Label = hasOpponent
+        ? _getLabelByRatio(
+            player2Name,
+            player2Value,
+            player2Ratio,
+            isScore,
+            maxValue,
+          )
+        : '';
+
     return Container(
-      height: widget.height,
+      height: double.infinity,
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(8), // 稍微圆角
+        borderRadius: BorderRadius.circular(8),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(8),
         child: Stack(
           children: [
+            // 玩家1的进度条（从左侧开始）
             Positioned.fill(
               child: Align(
-                alignment: widget.isReversed
-                    ? Alignment.centerRight
-                    : Alignment.centerLeft,
+                alignment: Alignment.centerLeft,
                 child: FractionallySizedBox(
-                  widthFactor: currentProgress.clamp(0.0, 1.0),
+                  widthFactor: effectivePlayer1Ratio.clamp(0.0, 1.0),
                   heightFactor: 1.0,
                   child: Container(
                     decoration: BoxDecoration(
-                      color: widget.color,
-                      borderRadius: BorderRadius.circular(8),
+                      color: player1Color,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(8),
+                        bottomLeft: Radius.circular(8),
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
-            if (widget.label != null)
+            // 玩家2的进度条（从右侧开始）
+            if (hasOpponent)
               Positioned.fill(
-                child: Center(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                    child: Text(
-                      widget.label!,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: _getAdaptiveTextColor(
-                          widget.color,
-                          colorScheme,
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: FractionallySizedBox(
+                    widthFactor: effectivePlayer2Ratio.clamp(0.0, 1.0),
+                    heightFactor: 1.0,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: player2Color,
+                        borderRadius: const BorderRadius.only(
+                          topRight: Radius.circular(8),
+                          bottomRight: Radius.circular(8),
                         ),
-                        shadows: [
-                          Shadow(
-                            blurRadius: _getShadowBlurRadius(widget.color),
-                            color: _getShadowColor(
-                              widget.color,
-                              colorScheme,
-                            ),
-                          ),
-                        ],
                       ),
                     ),
+                  ),
+                ),
+              ),
+            // 玩家1标签（左侧）
+            Positioned(
+              left: 8,
+              top: 0,
+              bottom: 0,
+              child: Center(
+                child: Text(
+                  player1Label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: _getAdaptiveTextColor(player1Color, colorScheme),
+                    shadows: [
+                      Shadow(
+                        blurRadius: 2,
+                        color: _getShadowColor(player1Color),
+                      ),
+                    ],
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+            // 玩家2标签（右侧）
+            if (hasOpponent)
+              Positioned(
+                right: 8,
+                top: 0,
+                bottom: 0,
+                child: Center(
+                  child: Text(
+                    player2Label,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: _getAdaptiveTextColor(player2Color, colorScheme),
+                      shadows: [
+                        Shadow(
+                          blurRadius: 2,
+                          color: _getShadowColor(player2Color),
+                        ),
+                      ],
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ),
@@ -469,44 +244,115 @@ class _MirroredProgressBarState extends State<_MirroredProgressBar>
     );
   }
 
+  /// 根据玩家占比获取颜色 (占比越高饱和度越高)
+  Color _getColorByRatio(
+    double ratio,
+    bool isScore, {
+    required bool isPlayer1,
+  }) {
+    // 占比范围 0.0 ~ 1.0
+    // 将占比映射到饱和度：占比50%时饱和度50%，占比越高饱和度越高
+    // 使用非线性映射，让优势更明显
+    final saturation = 0.2 + (ratio * 0.8); // 20% ~ 100%
+
+    if (isScore) {
+      // 得分使用橙色系
+      final lightness = 0.55;
+      // 玩家1和玩家2使用不同的色相以区分
+      final hue = isPlayer1 ? 30.0 : 15.0; // 橙色 vs 橙红色
+      return HSLColor.fromAHSL(1.0, hue, saturation, lightness).toColor();
+    } else {
+      // 进度使用蓝色系
+      final lightness = 0.50;
+      // 玩家1和玩家2使用不同的色相以区分
+      final hue = isPlayer1 ? 210.0 : 195.0; // 蓝色 vs 青蓝色
+      return HSLColor.fromAHSL(1.0, hue, saturation, lightness).toColor();
+    }
+  }
+
+  /// 根据玩家占比生成标签（占比越高越嚣张）
+  String _getLabelByRatio(
+    String name,
+    int value,
+    double ratio,
+    bool isScore,
+    int? maxValue,
+  ) {
+    if (isScore) {
+      // 得分标签 - 基于相对优势
+      if (ratio >= 0.7) {
+        // 碾压优势 (70%+)
+        return '$value分 ψ(｀∇´)ψ';
+      } else if (ratio >= 0.6) {
+        // 明显领先 (60%+)
+        return '$value分 ( •̀ ω •́ )';
+      } else if (ratio >= 0.5) {
+        // 恰好相等时显示棋逢对手
+        if (ratio == 0.5) {
+          return '$value分 ( ͡• ͜ʖ ͡• )';
+        } else {
+          // 微弱领先 (50%+)
+          return '$value分 o(^▽^)o';
+        }
+      } else if (ratio >= 0.4) {
+        // 微弱落后 (40%+)
+        return '$value分 〒▽〒';
+      } else if (ratio >= 0.3) {
+        // 明显落后 (30%+)
+        return '$value分 ≧ ﹏ ≦';
+      } else {
+        // 大幅落后 (<30%)
+        return '$value分 X﹏X';
+      }
+    } else {
+      // 进度标签 - 基于相对优势
+      //final max = maxValue ?? value;
+      if (ratio >= 0.7) {
+        // 碾压优势
+        return '${value+1}题 ƪ(˘⌣˘)ʃ';
+      } else if (ratio >= 0.6) {
+        // 明显领先
+        return '${value+1}题 （￣︶￣）';
+      } else if (ratio >= 0.5) {
+        // 恰好相等时显示棋逢对手
+        if (ratio == 0.5) {
+          return '${value+1}题（⊙ｏ⊙）';
+        } else {
+          // 微弱领先
+          return '${value+1}题 (●ˇ∀ˇ●)';
+        }
+      } else if (ratio >= 0.4) {
+        // 微弱落后
+        return '${value+1}题 ( •̀ ω •́ )';
+      } else if (ratio >= 0.3) {
+        // 明显落后
+        return '${value+1}题 ಠ_ಠ';
+      } else {
+        // 大幅落后
+        return '${value+1}题 ಥ_ಥ';
+      }
+    }
+  }
+
   /// 根据背景色自适应文本颜色
   Color _getAdaptiveTextColor(Color backgroundColor, ColorScheme colorScheme) {
-    // 计算亮度决定使用深色还是浅色文本
     final luminance = backgroundColor.computeLuminance();
-    
-    // 深色背景使用浅色文本，浅色背景使用深色文本
+
     if (luminance < 0.5) {
-      // 深色背景
       return colorScheme.surface;
     } else {
-      // 浅色背景
       return colorScheme.onSurface;
     }
   }
 
   /// 获取自适应阴影颜色
-  Color _getShadowColor(Color backgroundColor, ColorScheme colorScheme) {
+  Color _getShadowColor(Color backgroundColor) {
     final luminance = backgroundColor.computeLuminance();
-    
+
     if (luminance < 0.5) {
-      // 深色背景，使用浅色阴影
       return Colors.white.withValues(alpha: 0.5);
     } else {
-      // 浅色背景，使用深色阴影
       return Colors.black.withValues(alpha: 0.3);
-    }
-  }
-
-  /// 获取自适应阴影模糊半径
-  double _getShadowBlurRadius(Color backgroundColor) {
-    final luminance = backgroundColor.computeLuminance();
-    
-    if (luminance < 0.3 || luminance > 0.7) {
-      // 极端颜色（非常深或非常浅）使用更明显的阴影
-      return 2;
-    } else {
-      // 中等颜色使用适中的阴影
-      return 1;
     }
   }
 }
