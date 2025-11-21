@@ -24,6 +24,15 @@ class QuizHostService {
 
   String? _hostIp;
 
+  /// 获取主机IP地址
+  String? get hostIp => _hostIp;
+
+  /// 获取客户端列表（用于显示IP地址）
+  List<Socket> get clients => _clients;
+
+  /// 获取客户端玩家ID映射（用于匹配玩家和Socket）
+  Map<Socket, String> get clientPlayerIds => _clientPlayerIds;
+
   /// 初始化主机
   Future<bool> initialize(QuizRoom room) async {
     try {
@@ -32,9 +41,18 @@ class QuizHostService {
 
       gameController = QuizGameController(room);
 
-      // 获取本地IP
+      // 检查WiFi连接
+      final isWiFi = await _networkService.isWiFiConnected();
+      if (!isWiFi) {
+        return false; // 未连接WiFi，返回失败
+      }
+
+      // 获取本地WiFi IP
       _hostIp = await _networkService.getLocalIPv4();
-      print('尝试在 $_hostIp:${QuizNetworkService.tcpPort} 启动主机...');
+      if (_hostIp == null) {
+        return false; // 无法获取WiFi IP，返回失败
+      }
+      // print('尝试在 $_hostIp:${QuizNetworkService.tcpPort} 启动主机...');
 
       // 绑定TCP服务器,启用端口重用
       try {
@@ -47,15 +65,15 @@ class QuizHostService {
         // 设置服务器选项
         _server!.listen(
           _handleNewClient,
-          onError: (error) {
-            print('服务器监听错误: $error');
-          },
+          // onError: (error) {
+          //   print('服务器监听错误: $error');
+          // },
           cancelOnError: false,
         );
 
-        print('TCP服务器已启动,端口: ${QuizNetworkService.tcpPort}');
+        // print('TCP服务器已启动,端口: ${QuizNetworkService.tcpPort}');
       } catch (e) {
-        print('绑定TCP端口失败: $e');
+        // print('绑定TCP端口失败: $e');
         // 尝试强制清理后重试一次
         await Future.delayed(const Duration(milliseconds: 500));
         await _cleanupResources();
@@ -67,7 +85,7 @@ class QuizHostService {
           shared: true,
         );
         _server!.listen(_handleNewClient, cancelOnError: false);
-        print('TCP服务器重试成功');
+        // print('TCP服务器重试成功');
       }
 
       // 启动UDP广播
@@ -75,9 +93,9 @@ class QuizHostService {
         _udp = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
         _udp!.broadcastEnabled = true;
         _startBeacon();
-        print('UDP广播已启动');
+        // print('UDP广播已启动');
       } catch (e) {
-        print('启动UDP广播失败: $e');
+        // print('启动UDP广播失败: $e');
         // UDP失败不影响主要功能,继续运行
       }
 
@@ -86,11 +104,11 @@ class QuizHostService {
         _broadcastRoomUpdate();
       });
 
-      print('主机已成功启动,IP: $_hostIp');
+      // print('主机已成功启动,IP: $_hostIp');
       return true;
-    } catch (e, stackTrace) {
-      print('初始化主机失败: $e');
-      print('堆栈跟踪: $stackTrace');
+    } catch (e) {
+      // print('初始化主机失败: $e');
+      // print('堆栈跟踪: $stackTrace');
       // 确保清理资源
       await _cleanupResources();
       return false;
@@ -99,7 +117,7 @@ class QuizHostService {
 
   /// 清理资源(内部方法,不关闭gameController)
   Future<void> _cleanupResources() async {
-    print('清理网络资源...');
+    //print('清理网络资源...');
 
     // 停止UDP广播
     _beacon?.cancel();
@@ -109,7 +127,7 @@ class QuizHostService {
       _udp?.close();
       _udp = null;
     } catch (e) {
-      print('关闭UDP失败: $e');
+      //print('关闭UDP失败: $e');
     }
 
     // 关闭所有客户端连接
@@ -117,7 +135,7 @@ class QuizHostService {
       try {
         client.destroy();
       } catch (e) {
-        print('关闭客户端连接失败: $e');
+        //print('关闭客户端连接失败: $e');
       }
     }
     _clients.clear();
@@ -130,10 +148,10 @@ class QuizHostService {
       // 等待端口释放
       await Future.delayed(const Duration(milliseconds: 100));
     } catch (e) {
-      print('关闭服务器失败: $e');
+      //print('关闭服务器失败: $e');
     }
 
-    print('网络资源清理完成');
+    //print('网络资源清理完成');
   }
 
   /// 启动UDP广播信标
@@ -151,7 +169,7 @@ class QuizHostService {
 
   /// 处理新客户端连接
   void _handleNewClient(Socket client) {
-    print('新客户端连接: ${client.remoteAddress.address}');
+    //print('新客户端连接: ${client.remoteAddress.address}');
     _clients.add(client);
 
     _networkService
@@ -174,7 +192,7 @@ class QuizHostService {
           final player = QuizPlayer.fromJson(message.data);
           if (gameController.addPlayer(player)) {
             _clientPlayerIds[client] = player.id;
-            print('玩家 ${player.name} 加入房间');
+            //print('玩家 ${player.name} 加入房间');
           }
           break;
 
@@ -194,7 +212,7 @@ class QuizHostService {
           break;
       }
     } catch (e) {
-      print('处理客户端消息失败: $e');
+      //print('处理客户端消息失败: $e');
     }
   }
 
@@ -216,21 +234,21 @@ class QuizHostService {
 
   /// 广播房间更新
   void _broadcastRoomUpdate() {
-    print(
-      '广播房间更新 - 状态: ${gameController.room.status}, 题目: ${gameController.room.currentQuestionIndex}, 客户端数: ${_clients.length}',
-    );
+    // print(
+    //   '广播房间更新 - 状态: ${gameController.room.status}, 题目: ${gameController.room.currentQuestionIndex}, 客户端数: ${_clients.length}',
+    // );
     final message = NetworkMessage(
       type: MessageType.roomUpdate,
       data: gameController.room.toJson(),
     );
     _networkService.broadcastMessage(_clients, message);
-    print('房间更新已广播');
+    //print('房间更新已广播');
   }
 
   /// 开始游戏
   void startGame() {
     if (gameController.startGame()) {
-      print('开始游戏，广播房间状态');
+      //print('开始游戏，广播房间状态');
       // gameController.startGame() 会触发 roomUpdates，自动广播更新
     }
   }
@@ -259,18 +277,18 @@ class QuizHostService {
       multipleChoiceCount: _multipleChoiceCount,
     );
     gameController.restartGame(newQuestions);
-    print('游戏已重置，新题目已生成');
+    //print('游戏已重置，新题目已生成');
   }
 
   /// 关闭服务
   Future<void> dispose() async {
-    print('主机服务正在关闭...');
+    //print('主机服务正在关闭...');
 
     // 关闭游戏控制器(停止发送更新)
     try {
       gameController.dispose();
     } catch (e) {
-      print('关闭游戏控制器失败: $e');
+      //print('关闭游戏控制器失败: $e');
     }
 
     // 清理网络资源
@@ -281,10 +299,10 @@ class QuizHostService {
       try {
         _clientDisconnectController.close();
       } catch (e) {
-        print('关闭断连控制器失败: $e');
+        //print('关闭断连控制器失败: $e');
       }
     }
 
-    print('主机服务已完全关闭');
+    //print('主机服务已完全关闭');
   }
 }

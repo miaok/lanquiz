@@ -23,12 +23,14 @@ class ConfirmButton extends StatelessWidget {
       style: FilledButton.styleFrom(
         backgroundColor: colorScheme.tertiary,
         disabledBackgroundColor: colorScheme.surfaceContainerHighest,
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
       ),
       child: Text(
         '确认答案 ($selectedCount/$totalCount)',
         style: textTheme.labelLarge?.copyWith(
           color: selectedCount == 0 ? null : colorScheme.onTertiary,
+          fontWeight: FontWeight.bold,
+          fontSize: 18,
         ),
       ),
     );

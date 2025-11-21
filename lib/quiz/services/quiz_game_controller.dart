@@ -99,13 +99,13 @@ class QuizGameController {
       newScore = player.score + totalScore;
       newComboCount = player.comboCount + 1; // 连击数+1
       answerResult = AnswerResult.correct;
-      print(
-        '玩家 ${player.name} 答对了!基础分: $baseScore, 连击: $newComboCount, 新总分: $newScore',
-      );
+      // print(
+      //   '玩家 ${player.name} 答对了!基础分: $baseScore, 连击: $newComboCount, 新总分: $newScore',
+      // );
     } else {
       newComboCount = 0; // 答错重置连击数
       answerResult = AnswerResult.incorrect;
-      print('玩家 ${player.name} 答错了,连击中断');
+      // print('玩家 ${player.name} 答错了,连击中断');
     }
 
     // 判断是否是最后一题
@@ -146,7 +146,7 @@ class QuizGameController {
 
     // 检查是否所有人都完成了所有题目
     if (room.allPlayersFinished) {
-      print('所有玩家都已完成所有题目，游戏结束');
+      // print('所有玩家都已完成所有题目，游戏结束');
       room = room.copyWith(status: RoomStatus.finished);
       _notifyUpdate();
     }
@@ -202,12 +202,12 @@ class QuizGameController {
   }
 
   void _notifyUpdate() {
-    print('GameController._notifyUpdate() - 触发房间更新通知');
+    // print('GameController._notifyUpdate() - 触发房间更新通知');
     if (!_roomUpdateController.isClosed) {
       _roomUpdateController.add(room);
-      print('房间更新通知已发送到stream');
+      // print('房间更新通知已发送到stream');
     } else {
-      print('警告：StreamController已关闭，无法发送更新');
+      // print('警告：StreamController已关闭，无法发送更新');
     }
   }
 

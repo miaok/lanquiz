@@ -359,7 +359,7 @@ class _QuizGameScreenState extends State<QuizGameScreen> {
     });
 
     // 延迟 200ms 后提交答案
-    Future.delayed(const Duration(milliseconds: 200), () {
+    Future.delayed(const Duration(milliseconds: 300), () {
       if (!mounted) return;
 
       if (widget.isHost) {
@@ -396,7 +396,7 @@ class _QuizGameScreenState extends State<QuizGameScreen> {
     });
 
     // 延迟 200ms 后提交答案
-    Future.delayed(const Duration(milliseconds: 200), () {
+    Future.delayed(const Duration(milliseconds: 300), () {
       if (!mounted) return;
 
       if (widget.isHost) {

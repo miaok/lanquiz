@@ -27,12 +27,26 @@ class QuizClientService {
 
   QuizRoom? currentRoom;
   String? myPlayerId;
+  String? _myIp; // 缓存本地IP地址
+
+  /// 获取连接的主机IP地址
+  String? get hostIp => _tcp?.remoteAddress.address;
+
+  /// 获取本地IP地址
+  String? get myIp => _myIp;
 
   /// 发现并连接到主机
   Future<bool> discoverAndConnect(QuizPlayer player) async {
     try {
       // 先清理可能存在的旧连接
       await _cleanupConnection();
+
+      // 检查WiFi连接
+      final isWiFi = await _networkService.isWiFiConnected();
+      if (!isWiFi) {
+        _updateStatus('未连接WiFi，请连接WiFi后重试');
+        return false;
+      }
 
       myPlayerId = player.id;
       _updateStatus('正在搜索房间...');
@@ -61,11 +75,11 @@ class QuizClientService {
           // 设置Socket选项
           _tcp!.setOption(SocketOption.tcpNoDelay, true);
 
-          print('成功连接到主机: ${host.$1}:${host.$2}');
+          // print('成功连接到主机: ${host.$1}:${host.$2}');
           break;
         } catch (e) {
           retryCount++;
-          print('连接失败 (尝试 $retryCount/$maxRetries): $e');
+          // print('连接失败 (尝试 $retryCount/$maxRetries): $e');
 
           if (retryCount >= maxRetries) {
             _updateStatus('连接失败: 无法连接到主机');
@@ -90,14 +104,14 @@ class QuizClientService {
           .listen(
             _handleServerMessage,
             onDone: () {
-              print('与主机的连接已断开');
+              // print('与主机的连接已断开');
               _updateStatus('已断开连接');
               if (!_disconnectController.isClosed) {
                 _disconnectController.add(null);
               }
             },
             onError: (error) {
-              print('连接错误: $error');
+              // print('连接错误: $error');
               _updateStatus('连接错误: $error');
               if (!_disconnectController.isClosed) {
                 _disconnectController.add(null);
@@ -106,11 +120,14 @@ class QuizClientService {
             cancelOnError: false,
           );
 
+      // 获取本地IP地址
+      _myIp = await _networkService.getLocalIPv4();
+
       _updateStatus('已连接');
       return true;
-    } catch (e, stackTrace) {
-      print('连接失败: $e');
-      print('堆栈跟踪: $stackTrace');
+    } catch (e) {
+      // print('连接失败: $e');
+      // print('堆栈跟踪: $stackTrace');
       _updateStatus('连接失败: $e');
       await _cleanupConnection();
       return false;
@@ -163,43 +180,44 @@ class QuizClientService {
 
   /// 处理服务器消息
   void _handleServerMessage(String line) {
-    try {
-      print(
-        '客户端收到消息: ${line.substring(0, line.length > 100 ? 100 : line.length)}...',
-      );
-      final message = NetworkMessage.fromJson(line);
-      print('消息类型: ${message.type}');
+    // try {
+    // print(
+    //   '客户端收到消息: ${line.substring(0, line.length > 100 ? 100 : line.length)}...',
+    // );
+    final message = NetworkMessage.fromJson(line);
+    //print('消息类型: ${message.type}');
 
-      switch (message.type) {
-        case MessageType.roomUpdate:
-          currentRoom = QuizRoom.fromJson(message.data);
-          print(
-            '房间状态更新 - 状态: ${currentRoom!.status}, 题目: ${currentRoom!.currentQuestionIndex}, 玩家数: ${currentRoom!.players.length}',
-          );
-          _roomUpdateController.add(currentRoom!);
-          break;
+    switch (message.type) {
+      case MessageType.roomUpdate:
+        currentRoom = QuizRoom.fromJson(message.data);
+        // print(
+        //   '房间状态更新 - 状态: ${currentRoom!.status}, 题目: ${currentRoom!.currentQuestionIndex}, 玩家数: ${currentRoom!.players.length}',
+        // );
+        _roomUpdateController.add(currentRoom!);
+        break;
 
-        case MessageType.startGame:
-        case MessageType.showAnswer:
-        case MessageType.nextQuestion:
-          // 这些消息通过roomUpdate处理
-          print('收到专用消息类型: ${message.type}');
-          break;
+      case MessageType.startGame:
+      case MessageType.showAnswer:
+      case MessageType.nextQuestion:
+        // 这些消息通过roomUpdate处理
+        //print('收到专用消息类型: ${message.type}');
+        break;
 
-        default:
-          print('未知消息类型: ${message.type}');
-          break;
-      }
-    } catch (e) {
-      print('处理服务器消息失败: $e');
-      print('错误消息内容: $line');
+      default:
+        //print('未知消息类型: ${message.type}');
+        break;
     }
   }
+  // catch (e) {
+  //   print('处理服务器消息失败: $e');
+  //   print('错误消息内容: $line');
+  // }
+  // }
 
   /// 玩家准备
   void playerReady(bool isReady) {
     if (_tcp == null || myPlayerId == null) {
-      print('无法发送准备状态：Socket或玩家ID为空');
+      // print('无法发送准备状态：Socket或玩家ID为空');
       return;
     }
 
@@ -210,14 +228,14 @@ class QuizClientService {
       );
       _networkService.sendMessage(_tcp!, message);
     } catch (e) {
-      print('发送准备状态失败: $e');
+      // print('发送准备状态失败: $e');
     }
   }
 
   /// 提交答案
   void submitAnswer(dynamic answerIndex) {
     if (_tcp == null || myPlayerId == null) {
-      print('无法提交答案：Socket或玩家ID为空');
+      // print('无法提交答案：Socket或玩家ID为空');
       return;
     }
 
@@ -228,7 +246,7 @@ class QuizClientService {
       );
       _networkService.sendMessage(_tcp!, message);
     } catch (e) {
-      print('提交答案失败: $e');
+      // print('提交答案失败: $e');
     }
   }
 
@@ -240,14 +258,14 @@ class QuizClientService {
 
   /// 清理连接资源(内部方法)
   Future<void> _cleanupConnection() async {
-    print('清理客户端连接资源...');
+    // print('清理客户端连接资源...');
 
     // 取消TCP订阅
     try {
       await _tcpSub?.cancel();
       _tcpSub = null;
     } catch (e) {
-      print('取消TCP订阅失败: $e');
+      // print('取消TCP订阅失败: $e');
     }
 
     // 关闭TCP连接
@@ -257,7 +275,7 @@ class QuizClientService {
       // 等待连接完全关闭
       await Future.delayed(const Duration(milliseconds: 100));
     } catch (e) {
-      print('关闭TCP连接失败: $e');
+      // print('关闭TCP连接失败: $e');
     }
 
     // 关闭UDP
@@ -265,19 +283,20 @@ class QuizClientService {
       _udp?.close();
       _udp = null;
     } catch (e) {
-      print('关闭UDP失败: $e');
+      // print('关闭UDP失败: $e');
     }
 
     // 清理状态
     currentRoom = null;
     myPlayerId = null;
+    _myIp = null;
 
-    print('客户端连接资源清理完成');
+    // print('客户端连接资源清理完成');
   }
 
   /// 断开连接
   Future<void> dispose() async {
-    print('客户端服务正在关闭...');
+    // print('客户端服务正在关闭...');
 
     // 清理连接资源
     await _cleanupConnection();
@@ -287,7 +306,7 @@ class QuizClientService {
       try {
         _roomUpdateController.close();
       } catch (e) {
-        print('关闭房间更新控制器失败: $e');
+        // print('关闭房间更新控制器失败: $e');
       }
     }
 
@@ -295,7 +314,7 @@ class QuizClientService {
       try {
         _statusController.close();
       } catch (e) {
-        print('关闭状态控制器失败: $e');
+        // print('关闭状态控制器失败: $e');
       }
     }
 
@@ -303,10 +322,10 @@ class QuizClientService {
       try {
         _disconnectController.close();
       } catch (e) {
-        print('关闭断连控制器失败: $e');
+        // print('关闭断连控制器失败: $e');
       }
     }
 
-    print('客户端服务已完全关闭');
+    // print('客户端服务已完全关闭');
   }
 }

@@ -62,9 +62,6 @@ class ThemeProvider extends ChangeNotifier {
 
     _themeMode = mode;
     notifyListeners();
-
-    // TODO: 可以在这里添加持久化逻辑
-    // await _saveThemePreference(mode);
   }
 
   /// 切换浅色/深色模式（不包括系统模式）
@@ -90,27 +87,4 @@ class ThemeProvider extends ChangeNotifier {
   void setSystemMode() {
     setThemeMode(AppThemeMode.system);
   }
-
-  // ============ 持久化支持（可选实现）============
-
-  /// 从持久化存储加载主题偏好
-  ///
-  /// 可以使用 shared_preferences 或其他存储方案
-  /// ```dart
-  /// Future<void> loadThemePreference() async {
-  ///   final prefs = await SharedPreferences.getInstance();
-  ///   final modeIndex = prefs.getInt('theme_mode') ?? 2; // 默认跟随系统
-  ///   _themeMode = AppThemeMode.values[modeIndex];
-  ///   notifyListeners();
-  /// }
-  /// ```
-
-  /// 保存主题偏好到持久化存储
-  ///
-  /// ```dart
-  /// Future<void> _saveThemePreference(AppThemeMode mode) async {
-  ///   final prefs = await SharedPreferences.getInstance();
-  ///   await prefs.setInt('theme_mode', mode.index);
-  /// }
-  /// ```
 }

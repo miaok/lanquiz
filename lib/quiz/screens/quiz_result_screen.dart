@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:lanquizgame/quiz/models/question.dart';
+import 'package:lanquiz/quiz/models/question.dart';
 import '../models/quiz_room.dart';
 import '../models/player.dart';
 import '../services/quiz_host_service.dart';

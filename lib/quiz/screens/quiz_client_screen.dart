@@ -119,7 +119,7 @@ class _QuizClientScreenState extends State<QuizClientScreen> {
     _roomSubscription?.cancel();
     // 如果不是通过游戏开始导航离开,则清理服务
     if (!_isNavigating) {
-      print('QuizClientScreen dispose: 清理客户端服务');
+      // print('QuizClientScreen dispose: 清理客户端服务');
       _clientService.dispose();
     }
     super.dispose();
@@ -156,7 +156,7 @@ class _QuizClientScreenState extends State<QuizClientScreen> {
 
         if (shouldPop == true) {
           // 用户确认退出,清理服务
-          print('用户确认退出,清理客户端服务');
+          // print('用户确认退出,清理客户端服务');
           await _clientService.dispose();
           // 手动触发返回操作
           if (context.mounted) {
@@ -239,6 +239,20 @@ class _QuizClientScreenState extends State<QuizClientScreen> {
                     itemBuilder: (context, index) {
                       final player = _room!.players[index];
                       final isMe = player.id == _clientService.myPlayerId;
+
+                      // 获取玩家IP地址
+                      String ipAddress = '';
+                      if (player.id == _room!.hostId) {
+                        // 房主显示主机IP
+                        ipAddress = _clientService.hostIp ?? '未知';
+                      } else if (isMe) {
+                        // 当前玩家显示本地IP
+                        ipAddress = _clientService.myIp ?? '未知';
+                      } else {
+                        // 其他玩家显示未知（客户端无法获取其他客户端的IP）
+                        ipAddress = '未知';
+                      }
+
                       return ListTile(
                         leading: CircleAvatar(
                           backgroundColor: player.isReady
@@ -258,7 +272,8 @@ class _QuizClientScreenState extends State<QuizClientScreen> {
                           ),
                         ),
                         subtitle: Text(
-                          player.id == _room!.hostId ? '房主' : '玩家',
+                          '${player.id == _room!.hostId ? '房主' : '玩家'} · $ipAddress',
+                          style: TextStyle(fontSize: 12),
                         ),
                         trailing: Icon(
                           player.isReady

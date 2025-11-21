@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../models/quiz_room.dart';
 import '../models/player.dart';
@@ -35,12 +36,12 @@ class _QuizHostScreenState extends State<QuizHostScreen> {
   StreamSubscription<QuizRoom>? _roomUpdateSubscription;
 
   // 题型数量设置
-  int _trueFalseCount = 10; // 判断题数量，默认1道
-  int _singleChoiceCount = 10; // 单选题数量，默认1道
-  int _multipleChoiceCount = 10; // 多选题数量，默认1道
+  int _trueFalseCount = 34; // 判断题数量
+  int _singleChoiceCount = 33; // 单选题数量
+  int _multipleChoiceCount = 33; // 多选题数量
 
   // 当前选中的预设模式
-  QuizPresetMode? _selectedPreset = QuizPresetMode.casual;
+  QuizPresetMode? _selectedPreset = QuizPresetMode.standard;
 
   @override
   void initState() {
@@ -97,9 +98,13 @@ class _QuizHostScreenState extends State<QuizHostScreen> {
       _setupRoomListener();
     } else {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('创建房间失败')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('创建房间失败，请确保已连接WiFi局域网'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+            duration: const Duration(seconds: 3),
+          ),
+        );
         Navigator.pop(context);
       }
     }
@@ -135,7 +140,7 @@ class _QuizHostScreenState extends State<QuizHostScreen> {
     // 如果不是通过 _startGame 导航离开,则清理服务
     // 通过检查是否还有其他路由来判断
     if (!_isNavigatingToGame) {
-      print('QuizHostScreen dispose: 清理主机服务');
+      // print('QuizHostScreen dispose: 清理主机服务');
       _hostService.dispose();
     }
     super.dispose();
@@ -178,7 +183,7 @@ class _QuizHostScreenState extends State<QuizHostScreen> {
 
         if (shouldPop == true) {
           // 用户确认退出,清理服务
-          print('用户确认退出,清理主机服务');
+          // print('用户确认退出,清理主机服务');
           await _hostService.dispose();
           // 手动触发返回操作
           if (context.mounted) {
@@ -320,6 +325,28 @@ class _QuizHostScreenState extends State<QuizHostScreen> {
                             itemCount: _room!.players.length,
                             itemBuilder: (context, index) {
                               final player = _room!.players[index];
+                              // 获取玩家IP地址
+                              String ipAddress = '';
+                              if (player.id == 'host') {
+                                ipAddress = _hostService.hostIp ?? '未知';
+                              } else {
+                                // 查找对应的客户端Socket
+                                Socket? clientSocket;
+                                for (final socket in _hostService.clients) {
+                                  if (_hostService.clientPlayerIds[socket] ==
+                                      player.id) {
+                                    clientSocket = socket;
+                                    break;
+                                  }
+                                }
+                                if (clientSocket != null) {
+                                  ipAddress =
+                                      clientSocket.remoteAddress.address;
+                                } else {
+                                  ipAddress = '未知';
+                                }
+                              }
+
                               return ListTile(
                                 leading: CircleAvatar(
                                   backgroundColor: player.isReady
@@ -332,7 +359,8 @@ class _QuizHostScreenState extends State<QuizHostScreen> {
                                 ),
                                 title: Text(player.name),
                                 subtitle: Text(
-                                  player.id == 'host' ? '房主' : '玩家',
+                                  '${player.id == 'host' ? '房主' : '玩家'} · $ipAddress',
+                                  style: TextStyle(fontSize: 12),
                                 ),
                                 trailing: Icon(
                                   player.isReady

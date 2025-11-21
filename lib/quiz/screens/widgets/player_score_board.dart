@@ -309,27 +309,27 @@ class _VersusBar extends StatelessWidget {
       //final max = maxValue ?? value;
       if (ratio >= 0.7) {
         // 碾压优势
-        return '${value+1}题 ƪ(˘⌣˘)ʃ';
+        return '$value题 ƪ(˘⌣˘)ʃ';
       } else if (ratio >= 0.6) {
         // 明显领先
-        return '${value+1}题 （￣︶￣）';
+        return '$value题 （￣︶￣）';
       } else if (ratio >= 0.5) {
         // 恰好相等时显示棋逢对手
         if (ratio == 0.5) {
-          return '${value+1}题（⊙ｏ⊙）';
+          return '$value题（⊙ｏ⊙）';
         } else {
           // 微弱领先
-          return '${value+1}题 (●ˇ∀ˇ●)';
+          return '$value题 (●ˇ∀ˇ●)';
         }
       } else if (ratio >= 0.4) {
         // 微弱落后
-        return '${value+1}题 ( •̀ ω •́ )';
+        return '$value题 ( •̀ ω •́ )';
       } else if (ratio >= 0.3) {
         // 明显落后
-        return '${value+1}题 ಠ_ಠ';
+        return '$value题 ಠ_ಠ';
       } else {
         // 大幅落后
-        return '${value+1}题 ಥ_ಥ';
+        return '$value题 ಥ_ಥ';
       }
     }
   }

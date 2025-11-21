@@ -20,11 +20,11 @@ class QuestionRepository {
       _questions = jsonList.map((json) => Question.fromJson(json)).toList();
       _isLoaded = true;
       stopwatch.stop();
-      print(
-        'Loaded ${_questions.length} questions from JSON in ${stopwatch.elapsedMilliseconds}ms',
-      );
+      // print(
+      //   'Loaded ${_questions.length} questions from JSON in ${stopwatch.elapsedMilliseconds}ms',
+      // );
     } catch (e) {
-      print('Error loading questions: $e');
+      // print('Error loading questions: $e');
       _questions = [];
     }
   }

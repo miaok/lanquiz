@@ -3,6 +3,7 @@ import 'dart:math';
 import 'quiz_host_screen.dart';
 import 'quiz_client_screen.dart';
 import '../widgets/theme_switcher.dart';
+import '../services/quiz_network_service.dart';
 
 /// 知识竞答主页
 class QuizHomeScreen extends StatefulWidget {
@@ -37,12 +38,12 @@ class _QuizHomeScreenState extends State<QuizHomeScreen> {
     String nickname = '';
 
     // 生成3个随机字母
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 2; i++) {
       nickname += letters[_random.nextInt(letters.length)];
     }
 
     // 生成2个随机数字
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < 3; i++) {
       nickname += numbers[_random.nextInt(numbers.length)];
     }
 
@@ -54,15 +55,6 @@ class _QuizHomeScreenState extends State<QuizHomeScreen> {
     setState(() {
       _nameController.text = _generateRandomNickname();
     });
-
-    // 显示提示消息
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('新昵称：${_nameController.text}'),
-        duration: Duration(seconds: 1),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
   }
 
   @override
@@ -86,10 +78,14 @@ class _QuizHomeScreenState extends State<QuizHomeScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     // 标题
-                    Icon(Icons.quiz, size: 80, color: colorScheme.primary),
+                    Icon(
+                      Icons.flutter_dash,
+                      size: 100,
+                      color: colorScheme.primary,
+                    ),
                     const SizedBox(height: 16),
                     Text(
-                      '知识竞答',
+                      '1V1挑战',
                       style: textTheme.displaySmall?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: colorScheme.onSurface,
@@ -153,7 +149,7 @@ class _QuizHomeScreenState extends State<QuizHomeScreen> {
     );
   }
 
-  void _createRoom() {
+  void _createRoom() async {
     final name = _nameController.text.trim();
     if (name.isEmpty) {
       ScaffoldMessenger.of(
@@ -162,13 +158,29 @@ class _QuizHomeScreenState extends State<QuizHomeScreen> {
       return;
     }
 
+    // 检查WiFi连接
+    final networkService = QuizNetworkService.instance;
+    final isWiFi = await networkService.isWiFiConnected();
+    if (!isWiFi) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('未连接WiFi，请连接WiFi局域网后重试'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
+    if (!mounted) return;
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => QuizHostScreen(playerName: name)),
     );
   }
 
-  void _joinRoom() {
+  void _joinRoom() async {
     final name = _nameController.text.trim();
     if (name.isEmpty) {
       ScaffoldMessenger.of(
@@ -177,6 +189,22 @@ class _QuizHomeScreenState extends State<QuizHomeScreen> {
       return;
     }
 
+    // 检查WiFi连接
+    final networkService = QuizNetworkService.instance;
+    final isWiFi = await networkService.isWiFiConnected();
+    if (!isWiFi) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('未连接WiFi，请连接WiFi局域网后重试'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
+    if (!mounted) return;
     Navigator.push(
       context,
       MaterialPageRoute(
