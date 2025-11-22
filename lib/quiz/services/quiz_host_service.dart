@@ -7,6 +7,7 @@ import '../data/question_repository.dart';
 import 'quiz_network_service.dart';
 import 'quiz_game_controller.dart';
 import 'network_resource_manager.dart';
+import '../utils/app_logger.dart';
 
 /// 主机端服务（房主）
 class QuizHostService with NetworkResourceManager {
@@ -143,7 +144,7 @@ class QuizHostService with NetworkResourceManager {
 
   /// 处理新客户端连接
   void _handleNewClient(Socket client) {
-    //print('新客户端连接: ${client.remoteAddress.address}');
+    appLogger.d('新客户端连接: ${client.remoteAddress.address}');
     _clients.add(client);
 
     _networkService
@@ -178,7 +179,7 @@ class QuizHostService with NetworkResourceManager {
           if (existingPlayer != null) {
             // 玩家重连
             _clientPlayerIds[client] = player.id;
-            //print('玩家 ${player.name} 重连成功');
+            appLogger.i('玩家 ${player.name} 重连成功');
 
             // 立即发送当前房间状态
             _networkService.sendMessage(
@@ -192,7 +193,7 @@ class QuizHostService with NetworkResourceManager {
             // 新玩家加入
             if (gameController.addPlayer(player)) {
               _clientPlayerIds[client] = player.id;
-              //print('玩家 ${player.name} 加入房间');
+              appLogger.i('玩家 ${player.name} 加入房间');
             }
           }
           break;
@@ -213,7 +214,7 @@ class QuizHostService with NetworkResourceManager {
           break;
       }
     } catch (e) {
-      //print('处理客户端消息失败: $e');
+      appLogger.e('处理客户端消息失败', e);
     }
   }
 
@@ -240,21 +241,21 @@ class QuizHostService with NetworkResourceManager {
 
   /// 广播房间更新
   void _broadcastRoomUpdate() {
-    // print(
-    //   '广播房间更新 - 状态: ${gameController.room.status}, 题目: ${gameController.room.currentQuestionIndex}, 客户端数: ${_clients.length}',
-    // );
+    appLogger.d(
+      '广播房间更新 - 状态: ${gameController.room.status}, 题目: ${gameController.room.currentQuestionIndex}, 客户端数: ${_clients.length}',
+    );
     final message = NetworkMessage(
       type: MessageType.roomUpdate,
       data: gameController.room.toJson(),
     );
     _networkService.broadcastMessage(_clients, message);
-    //print('房间更新已广播');
+    appLogger.d('房间更新已广播');
   }
 
   /// 开始游戏
   void startGame() {
     if (gameController.startGame()) {
-      //print('开始游戏，广播房间状态');
+      appLogger.i('开始游戏，广播房间状态');
       // gameController.startGame() 会触发 roomUpdates，自动广播更新
     }
   }
@@ -283,7 +284,7 @@ class QuizHostService with NetworkResourceManager {
       multipleChoiceCount: _multipleChoiceCount,
     );
     gameController.restartGame(newQuestions);
-    //print('游戏已重置，新题目已生成');
+    appLogger.i('游戏已重置，新题目已生成');
   }
 
   /// 关闭服务

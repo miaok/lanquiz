@@ -35,6 +35,7 @@ class QuizGameState {
   QuizGameState copyWith({
     QuizRoom? room,
     int? selectedAnswer,
+    bool clearSelectedAnswer = false, // 新增标志位
     List<int>? selectedAnswers,
     bool? showFeedback,
     bool? isFeedbackCorrect,
@@ -44,7 +45,9 @@ class QuizGameState {
   }) {
     return QuizGameState(
       room: room ?? this.room,
-      selectedAnswer: selectedAnswer,
+      selectedAnswer: clearSelectedAnswer
+          ? null
+          : (selectedAnswer ?? this.selectedAnswer),
       selectedAnswers: selectedAnswers ?? this.selectedAnswers,
       showFeedback: showFeedback ?? this.showFeedback,
       isFeedbackCorrect: isFeedbackCorrect ?? this.isFeedbackCorrect,
@@ -56,7 +59,7 @@ class QuizGameState {
 
   /// 清空选择的答案
   QuizGameState clearSelectedAnswers() {
-    return copyWith(selectedAnswer: null, selectedAnswers: const []);
+    return copyWith(clearSelectedAnswer: true, selectedAnswers: const []);
   }
 }
 
@@ -65,14 +68,15 @@ class QuizGameNotifier extends StateNotifier<QuizGameState> {
   QuizGameNotifier() : super(const QuizGameState());
 
   /// 更新房间状态
-  void updateRoom(QuizRoom room) {
+  void updateRoom(QuizRoom room, {int? playerQuestionIndex}) {
     state = state.copyWith(room: room);
-    _updateQuestionState(room);
+    _updateQuestionState(room, playerQuestionIndex);
   }
 
   /// 更新题目状态（处理乱序）
-  void _updateQuestionState(QuizRoom room) {
-    final newIndex = room.currentQuestionIndex;
+  void _updateQuestionState(QuizRoom room, int? playerQuestionIndex) {
+    // 使用玩家的题目索引（独立进度模式）或房间的题目索引
+    final newIndex = playerQuestionIndex ?? room.currentQuestionIndex;
 
     // 如果题目索引变化，重新生成乱序索引并清空选择
     if (newIndex != state.currentQuestionIndex) {
@@ -85,7 +89,7 @@ class QuizGameNotifier extends StateNotifier<QuizGameState> {
       state = state.copyWith(
         currentQuestionIndex: newIndex,
         shuffledIndices: shuffled,
-        selectedAnswer: null,
+        clearSelectedAnswer: true,
         selectedAnswers: const [],
         showFeedback: false,
       );

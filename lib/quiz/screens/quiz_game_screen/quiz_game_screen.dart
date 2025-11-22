@@ -7,12 +7,12 @@ import '../../models/player_model.dart';
 import '../../services/quiz_host_service.dart';
 import '../../services/quiz_client_service.dart';
 import '../../providers/quiz_game_provider.dart';
-import '../quiz_result_screen.dart';
+import '../quiz_result_screen/quiz_result_screen.dart';
 import 'widgets/player_score_board.dart';
 import 'widgets/question_card.dart';
 import 'widgets/option_button.dart';
 import 'widgets/confirm_button.dart';
-import '../widgets/waiting_screen.dart';
+import 'widgets/waiting_screen.dart';
 import 'widgets/answer_feedback_overlay.dart';
 
 /// 游戏页面
@@ -57,15 +57,35 @@ class _QuizGameScreenState extends ConsumerState<QuizGameScreen> {
       final initialRoom = widget.hostService!.gameController.room;
       Future.microtask(() {
         if (mounted) {
-          ref.read(quizGameProvider.notifier).updateRoom(initialRoom);
+          final hostPlayer = initialRoom.players.firstWhere(
+            (p) => p.id == 'host',
+            orElse: () => initialRoom.players.first,
+          );
+          ref
+              .read(quizGameProvider.notifier)
+              .updateRoom(
+                initialRoom,
+                playerQuestionIndex: hostPlayer.currentQuestionIndex,
+              );
         }
       });
 
       _roomSubscription = widget.hostService!.gameController.roomUpdates.listen(
         (room) {
           if (mounted) {
-            // 更新Provider状态
-            ref.read(quizGameProvider.notifier).updateRoom(room);
+            // 获取房主的题目索引
+            final hostPlayer = room.players.firstWhere(
+              (p) => p.id == 'host',
+              orElse: () => room.players.first,
+            );
+
+            // 更新Provider状态，传入玩家的题目索引
+            ref
+                .read(quizGameProvider.notifier)
+                .updateRoom(
+                  room,
+                  playerQuestionIndex: hostPlayer.currentQuestionIndex,
+                );
 
             // 检查是否需要导航到结果页
             final gameState = ref.read(quizGameProvider);
@@ -82,14 +102,37 @@ class _QuizGameScreenState extends ConsumerState<QuizGameScreen> {
       if (initialRoom != null) {
         Future.microtask(() {
           if (mounted) {
-            ref.read(quizGameProvider.notifier).updateRoom(initialRoom);
+            final myPlayerId = widget.clientService!.myPlayerId;
+            final myPlayer = initialRoom.players.firstWhere(
+              (p) => p.id == myPlayerId,
+              orElse: () => initialRoom.players.first,
+            );
+            ref
+                .read(quizGameProvider.notifier)
+                .updateRoom(
+                  initialRoom,
+                  playerQuestionIndex: myPlayer.currentQuestionIndex,
+                );
           }
         });
       }
 
       _roomSubscription = widget.clientService!.roomUpdates.listen((room) {
         if (mounted) {
-          ref.read(quizGameProvider.notifier).updateRoom(room);
+          // 获取客户端玩家的题目索引
+          final myPlayerId = widget.clientService!.myPlayerId;
+          final myPlayer = room.players.firstWhere(
+            (p) => p.id == myPlayerId,
+            orElse: () => room.players.first,
+          );
+
+          // 更新Provider状态，传入玩家的题目索引
+          ref
+              .read(quizGameProvider.notifier)
+              .updateRoom(
+                room,
+                playerQuestionIndex: myPlayer.currentQuestionIndex,
+              );
 
           final gameState = ref.read(quizGameProvider);
           if (room.status == RoomStatus.finished &&
@@ -376,29 +419,39 @@ class _QuizGameScreenState extends ConsumerState<QuizGameScreen> {
     // 获取原始索引
     final originalIndex = gameState.shuffledIndices[displayIndex];
 
-    // 更新Provider状态
+    // 更新Provider状态 - 显示选中效果（会保持到下一题）
     ref.read(quizGameProvider.notifier).selectSingleAnswer(displayIndex);
 
     // 检查答案是否正确
     final isCorrect = question.isAnswerCorrect(
       SingleChoiceAnswer(originalIndex),
     );
-    ref.read(quizGameProvider.notifier).showFeedback(isCorrect);
 
-    // 延迟后提交答案并隐藏反馈
+    // 延迟显示反馈，让用户看到选中的高亮效果
     _feedbackTimer?.cancel();
-    _feedbackTimer = Timer(const Duration(milliseconds: 500), () {
+    _feedbackTimer = Timer(const Duration(milliseconds: 200), () {
       if (!mounted) return;
 
-      // 隐藏反馈
-      ref.read(quizGameProvider.notifier).hideFeedback();
+      // 显示反馈
+      ref.read(quizGameProvider.notifier).showFeedback(isCorrect);
 
-      // 提交答案到服务
-      if (widget.isHost) {
-        widget.hostService!.gameController.submitAnswer('host', originalIndex);
-      } else {
-        widget.clientService!.submitAnswer(originalIndex);
-      }
+      // 再延迟后提交答案并隐藏反馈
+      _feedbackTimer = Timer(const Duration(milliseconds: 500), () {
+        if (!mounted) return;
+
+        // 隐藏反馈（选中状态会在题目索引变化时自动清除）
+        ref.read(quizGameProvider.notifier).hideFeedback();
+
+        // 提交答案到服务（会触发题目索引更新，自动清除选中状态）
+        if (widget.isHost) {
+          widget.hostService!.gameController.submitAnswer(
+            'host',
+            originalIndex,
+          );
+        } else {
+          widget.clientService!.submitAnswer(originalIndex);
+        }
+      });
     });
   }
 
@@ -423,28 +476,35 @@ class _QuizGameScreenState extends ConsumerState<QuizGameScreen> {
           ..sort();
 
     // 检查答案是否正确
-    // 检查答案是否正确
     final isCorrect = question.isAnswerCorrect(
       MultipleChoiceAnswer(originalIndices),
     );
-    ref.read(quizGameProvider.notifier).showFeedback(isCorrect);
 
-    // 延迟后提交答案
+    // 延迟显示反馈，让用户看到选中的高亮效果
     _feedbackTimer?.cancel();
-    _feedbackTimer = Timer(const Duration(milliseconds: 500), () {
+    _feedbackTimer = Timer(const Duration(milliseconds: 200), () {
       if (!mounted) return;
 
-      // 隐藏反馈
-      ref.read(quizGameProvider.notifier).hideFeedback();
+      // 显示反馈
+      ref.read(quizGameProvider.notifier).showFeedback(isCorrect);
 
-      if (widget.isHost) {
-        widget.hostService!.gameController.submitAnswer(
-          'host',
-          originalIndices,
-        );
-      } else {
-        widget.clientService!.submitAnswer(originalIndices);
-      }
+      // 再延迟后提交答案并隐藏反馈
+      _feedbackTimer = Timer(const Duration(milliseconds: 500), () {
+        if (!mounted) return;
+
+        // 隐藏反馈（选中状态会在题目索引变化时自动清除）
+        ref.read(quizGameProvider.notifier).hideFeedback();
+
+        // 提交答案到服务（会触发题目索引更新，自动清除选中状态）
+        if (widget.isHost) {
+          widget.hostService!.gameController.submitAnswer(
+            'host',
+            originalIndices,
+          );
+        } else {
+          widget.clientService!.submitAnswer(originalIndices);
+        }
+      });
     });
   }
 

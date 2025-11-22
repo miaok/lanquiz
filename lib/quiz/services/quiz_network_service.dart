@@ -134,7 +134,6 @@ class QuizNetworkService {
     try {
       socket.write('${message.toJson()}\n');
     } catch (e) {
-      //print('发送消息失败: $e');
       throw NetworkException('发送消息失败: $e');
     }
   }

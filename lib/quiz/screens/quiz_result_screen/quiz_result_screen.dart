@@ -1,16 +1,16 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../models/quiz_room_model.dart';
-import '../models/player_model.dart';
-import '../models/game_record_model.dart';
-import '../services/quiz_host_service.dart';
-import '../services/quiz_client_service.dart';
-import '../services/quiz_record_service.dart';
-import 'quiz_host_screen/quiz_host_screen.dart';
-import 'quiz_client_screen.dart';
-import 'quiz_result_screen/widgets/winners_section.dart';
-import 'quiz_result_screen/widgets/rank_list_item.dart';
-import 'quiz_result_screen/widgets/result_action_buttons.dart';
+import '../../models/quiz_room_model.dart';
+import '../../models/player_model.dart';
+import '../../models/game_record_model.dart';
+import '../../services/quiz_host_service.dart';
+import '../../services/quiz_client_service.dart';
+import '../../services/quiz_record_service.dart';
+import '../quiz_host_screen/quiz_host_screen.dart';
+import '../quiz_client_screen/quiz_client_screen.dart';
+import 'widgets/winners_section.dart';
+import 'widgets/rank_list_item.dart';
+import 'widgets/result_action_buttons.dart';
 
 /// 结果页面
 class QuizResultScreen extends StatefulWidget {

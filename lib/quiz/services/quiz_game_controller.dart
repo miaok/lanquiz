@@ -2,6 +2,7 @@ import 'dart:async';
 import '../models/quiz_room_model.dart';
 import '../models/player_model.dart';
 import '../models/question_model.dart';
+import '../utils/app_logger.dart';
 
 /// 知识竞答游戏控制器
 class QuizGameController {
@@ -151,7 +152,7 @@ class QuizGameController {
 
     // 检查是否所有人都完成了所有题目
     if (room.allPlayersFinished) {
-      // print('所有玩家都已完成所有题目，游戏结束');
+      appLogger.i('所有玩家都已完成所有题目，游戏结束');
       room = room.copyWith(
         status: RoomStatus.finished,
         gameEndTime: DateTime.now(), // 记录游戏结束时间
@@ -210,12 +211,12 @@ class QuizGameController {
   }
 
   void _notifyUpdate() {
-    // print('GameController._notifyUpdate() - 触发房间更新通知');
+    appLogger.d('GameController._notifyUpdate() - 触发房间更新通知');
     if (!_roomUpdateController.isClosed) {
       _roomUpdateController.add(room);
-      // print('房间更新通知已发送到stream');
+      appLogger.d('房间更新通知已发送到stream');
     } else {
-      // print('警告：StreamController已关闭，无法发送更新');
+      appLogger.w('警告：StreamController已关闭，无法发送更新');
     }
   }
 

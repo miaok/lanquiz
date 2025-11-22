@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../quiz_app.dart';
-import '../theme/theme_provider.dart';
+import 'theme_provider.dart';
 
 /// 主题切换组件
 ///
@@ -134,8 +134,9 @@ class _ThemeModeOption extends StatelessWidget {
                         color: isSelected
                             ? colorScheme.onPrimaryContainer
                             : colorScheme.onSurface,
-                        fontWeight:
-                            isSelected ? FontWeight.bold : FontWeight.normal,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.normal,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -151,11 +152,7 @@ class _ThemeModeOption extends StatelessWidget {
                 ),
               ),
               if (isSelected)
-                Icon(
-                  Icons.check_circle,
-                  color: colorScheme.primary,
-                  size: 24,
-                ),
+                Icon(Icons.check_circle, color: colorScheme.primary, size: 24),
             ],
           ),
         ),

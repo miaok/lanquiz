@@ -5,6 +5,7 @@ import '../models/quiz_room_model.dart';
 import '../models/player_model.dart';
 import 'quiz_network_service.dart';
 import 'network_resource_manager.dart';
+import '../utils/app_logger.dart';
 
 /// 客户端服务（玩家）
 class QuizClientService with NetworkResourceManager {
@@ -27,7 +28,13 @@ class QuizClientService with NetworkResourceManager {
   String? _myIp; // 缓存本地IP地址
 
   /// 获取连接的主机IP地址
-  String? get hostIp => _tcp?.remoteAddress.address;
+  String? get hostIp {
+    try {
+      return _tcp?.remoteAddress.address;
+    } catch (e) {
+      return null;
+    }
+  }
 
   /// 获取本地IP地址
   String? get myIp => _myIp;
@@ -135,7 +142,7 @@ class QuizClientService with NetworkResourceManager {
           _handleServerMessage,
           onDone: _handleDisconnect,
           onError: (error) {
-            // print('Socket error: $error');
+            appLogger.e('Socket error', error);
             _handleDisconnect();
           },
           cancelOnError: false,
@@ -304,7 +311,7 @@ class QuizClientService with NetworkResourceManager {
           break;
       }
     } catch (e) {
-      // print('Error parsing message: $e');
+      appLogger.e('Error parsing message', e);
     }
   }
 

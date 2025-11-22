@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
 import 'quiz_host_screen/quiz_host_screen.dart';
-import 'quiz_client_screen.dart';
+import 'quiz_client_screen/quiz_client_screen.dart';
 import 'quiz_records_screen/quiz_records_screen.dart';
-import '../widgets/theme_switcher.dart';
+import '../theme/theme_switcher.dart';
 import '../services/quiz_network_service.dart';
 
 /// 知识竞答主页

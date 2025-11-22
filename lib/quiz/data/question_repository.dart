@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/services.dart';
 import '../models/question_model.dart';
+import '../utils/app_logger.dart';
 
 /// 题目数据仓库
 class QuestionRepository {
@@ -20,11 +21,11 @@ class QuestionRepository {
       _questions = jsonList.map((json) => Question.fromJson(json)).toList();
       _isLoaded = true;
       stopwatch.stop();
-      // print(
-      //   'Loaded ${_questions.length} questions from JSON in ${stopwatch.elapsedMilliseconds}ms',
-      // );
+      appLogger.i(
+        'Loaded ${_questions.length} questions from JSON in ${stopwatch.elapsedMilliseconds}ms',
+      );
     } catch (e) {
-      // print('Error loading questions: $e');
+      appLogger.e('Error loading questions', e);
       _questions = [];
     }
   }

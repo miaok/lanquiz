@@ -46,11 +46,15 @@ class OptionButton extends StatelessWidget {
 
         Color? backgroundColor;
         Color? borderColor;
+        Color? textColor;
 
         if (isSelected) {
-          // 已选择但未提交或已提交
-          backgroundColor = colorScheme.primaryContainer;
+          // 已选择但未提交或已提交 - 使用更明显的高亮颜色
+          backgroundColor = colorScheme.primary;
           borderColor = colorScheme.primary;
+          textColor = colorScheme.onPrimary;
+        } else {
+          textColor = colorScheme.onSurface;
         }
 
         return Padding(
@@ -71,7 +75,7 @@ class OptionButton extends StatelessWidget {
                   child: Text(
                     question.options[index],
                     style: textTheme.bodyLarge?.copyWith(
-                      color: colorScheme.onSurface,
+                      color: textColor,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -95,10 +99,15 @@ class OptionButton extends StatelessWidget {
 
         Color? backgroundColor;
         Color? borderColor;
+        Color? textColor;
 
         if (isSelected) {
-          backgroundColor = colorScheme.primaryContainer;
+          // 已选择 - 使用更明显的高亮颜色
+          backgroundColor = colorScheme.primary;
           borderColor = colorScheme.primary;
+          textColor = colorScheme.onPrimary;
+        } else {
+          textColor = colorScheme.onSurface;
         }
 
         return Padding(
@@ -119,7 +128,7 @@ class OptionButton extends StatelessWidget {
                   child: Text(
                     question.options[index],
                     style: textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onSurface,
+                      color: textColor,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
