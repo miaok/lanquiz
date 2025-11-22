@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../models/question.dart';
+import '../../../models/question_model.dart';
 
 /// 错题项组件
 class WrongAnswerItem extends StatelessWidget {

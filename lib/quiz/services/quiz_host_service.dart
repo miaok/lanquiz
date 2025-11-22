@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import '../models/quiz_room.dart';
-import '../models/player.dart';
+import '../models/quiz_room_model.dart';
+import '../models/player_model.dart';
 import '../data/question_repository.dart';
 import 'quiz_network_service.dart';
 import 'quiz_game_controller.dart';

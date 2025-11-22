@@ -1,5 +1,5 @@
-import 'player.dart';
-import 'question.dart';
+import 'player_model.dart';
+import 'question_model.dart';
 
 /// 房间状态
 enum RoomStatus {

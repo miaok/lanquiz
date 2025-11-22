@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../models/player.dart';
-import '../../../models/quiz_room.dart';
+import '../../../models/player_model.dart';
+import '../../../models/quiz_room_model.dart';
 import 'wrong_answer_item.dart';
 
 /// 排行榜项组件

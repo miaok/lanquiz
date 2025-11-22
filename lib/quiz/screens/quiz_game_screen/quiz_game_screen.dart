@@ -1,20 +1,22 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../models/quiz_room.dart';
-import '../models/question.dart';
-import '../models/player.dart';
-import '../services/quiz_host_service.dart';
-import '../services/quiz_client_service.dart';
-import 'quiz_result_screen.dart';
-import 'quiz_game_screen/widgets/player_score_board.dart';
-import 'quiz_game_screen/widgets/question_card.dart';
-import 'quiz_game_screen/widgets/option_button.dart';
-import 'quiz_game_screen/widgets/confirm_button.dart';
-import 'widgets/waiting_screen.dart';
-import 'quiz_game_screen/widgets/answer_feedback_overlay.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../models/quiz_room_model.dart';
+import '../../models/question_model.dart';
+import '../../models/player_model.dart';
+import '../../services/quiz_host_service.dart';
+import '../../services/quiz_client_service.dart';
+import '../../providers/quiz_game_provider.dart';
+import '../quiz_result_screen.dart';
+import 'widgets/player_score_board.dart';
+import 'widgets/question_card.dart';
+import 'widgets/option_button.dart';
+import 'widgets/confirm_button.dart';
+import '../widgets/waiting_screen.dart';
+import 'widgets/answer_feedback_overlay.dart';
 
 /// 游戏页面
-class QuizGameScreen extends StatefulWidget {
+class QuizGameScreen extends ConsumerStatefulWidget {
   final bool isHost;
   final QuizHostService? hostService;
   final QuizClientService? clientService;
@@ -27,67 +29,73 @@ class QuizGameScreen extends StatefulWidget {
   });
 
   @override
-  State<QuizGameScreen> createState() => _QuizGameScreenState();
+  ConsumerState<QuizGameScreen> createState() => _QuizGameScreenState();
 }
 
-class _QuizGameScreenState extends State<QuizGameScreen> {
-  QuizRoom? _room;
-  int? _selectedAnswer; // 单选题/判断题的选择
-  final List<int> _selectedAnswers = []; // 多选题的选择
+class _QuizGameScreenState extends ConsumerState<QuizGameScreen> {
+  // 保留 StreamSubscription（仍需监听Service）
   StreamSubscription<QuizRoom>? _roomSubscription;
   StreamSubscription? _disconnectSubscription;
+  Timer? _feedbackTimer;
 
-  // 反馈弹窗状态
-  bool _showFeedback = false;
-  bool _isFeedbackCorrect = false;
-
-  // 乱序状态
-  int _currentQuestionIndex = -1;
-  List<int> _shuffledIndices = [];
-
-  // 防止重复导航到结果页面
-  bool _hasNavigatedToResult = false;
+  // 所有游戏状态现在由 Provider 管理
 
   @override
   void initState() {
     super.initState();
+    // 重置状态，确保每次进入页面都是新的开始
+    // 使用 Future.microtask 避免在构建期间修改 Provider
+    Future.microtask(() {
+      ref.read(quizGameProvider.notifier).reset();
+    });
     _setupListeners();
-    // 初始化乱序状态
-    if (_room != null) {
-      _updateQuestionState(_room!);
-    }
   }
 
   void _setupListeners() {
     if (widget.isHost) {
-      _room = widget.hostService!.gameController.room;
+      // 初始化Provider状态
+      final initialRoom = widget.hostService!.gameController.room;
+      Future.microtask(() {
+        if (mounted) {
+          ref.read(quizGameProvider.notifier).updateRoom(initialRoom);
+        }
+      });
+
       _roomSubscription = widget.hostService!.gameController.roomUpdates.listen(
         (room) {
           if (mounted) {
-            setState(() {
-              _updateQuestionState(room);
-              _room = room;
+            // 更新Provider状态
+            ref.read(quizGameProvider.notifier).updateRoom(room);
 
-              if (room.status == RoomStatus.finished &&
-                  !_hasNavigatedToResult) {
-                _navigateToResult();
-              }
-            });
+            // 检查是否需要导航到结果页
+            final gameState = ref.read(quizGameProvider);
+            if (room.status == RoomStatus.finished &&
+                !gameState.hasNavigatedToResult) {
+              _navigateToResult();
+            }
           }
         },
       );
     } else {
-      _room = widget.clientService!.currentRoom;
+      // 客户端逻辑
+      final initialRoom = widget.clientService!.currentRoom;
+      if (initialRoom != null) {
+        Future.microtask(() {
+          if (mounted) {
+            ref.read(quizGameProvider.notifier).updateRoom(initialRoom);
+          }
+        });
+      }
+
       _roomSubscription = widget.clientService!.roomUpdates.listen((room) {
         if (mounted) {
-          setState(() {
-            _updateQuestionState(room);
-            _room = room;
+          ref.read(quizGameProvider.notifier).updateRoom(room);
 
-            if (room.status == RoomStatus.finished && !_hasNavigatedToResult) {
-              _navigateToResult();
-            }
-          });
+          final gameState = ref.read(quizGameProvider);
+          if (room.status == RoomStatus.finished &&
+              !gameState.hasNavigatedToResult) {
+            _navigateToResult();
+          }
         }
       });
     }
@@ -123,41 +131,22 @@ class _QuizGameScreenState extends State<QuizGameScreen> {
     }
   }
 
-  void _updateQuestionState(QuizRoom newRoom) {
-    final newPlayer = newRoom.players.firstWhere(
-      (p) => p.id == _myPlayerId,
-      orElse: () => newRoom.players.first,
-    );
-
-    if (newPlayer.currentQuestionIndex != _currentQuestionIndex) {
-      _currentQuestionIndex = newPlayer.currentQuestionIndex;
-      _selectedAnswer = null;
-      _selectedAnswers.clear();
-      _showFeedback = false;
-
-      // 生成新的乱序索引
-      if (_currentQuestionIndex < newRoom.questions.length) {
-        final question = newRoom.questions[_currentQuestionIndex];
-        _shuffledIndices = List.generate(question.options.length, (i) => i)
-          ..shuffle();
-      } else {
-        _shuffledIndices = [];
-      }
-    }
-  }
-
   @override
   void dispose() {
     _roomSubscription?.cancel();
     _disconnectSubscription?.cancel();
+    _feedbackTimer?.cancel();
 
-    // 注意：不要在这里关闭服务，因为服务需要传递给结果页面以便“再来一局”
-    // 服务将在 QuizResultScreen 中点击“返回主页”时关闭
+    // 重置Provider状态
+    // ref.read(quizGameProvider.notifier).reset(); // 移至 initState 防止 dispose 报错
+
+    // 注意：不要在这里关闭服务，因为服务需要传递给结果页面以便"再来一局"
+    // 服务将在 QuizResultScreen 中点击"返回主页"时关闭
 
     super.dispose();
   }
 
-  // 获取当前玩家
+  // 获取当前玩家ID
   String get _myPlayerId {
     if (widget.isHost) {
       return 'host';
@@ -167,11 +156,9 @@ class _QuizGameScreenState extends State<QuizGameScreen> {
   }
 
   // 根据得分对比生成AppBar标题
-  String _getAppBarTitle(QuizPlayer myPlayer) {
-    if (_room == null) return '答题中...';
-
+  String _getAppBarTitle(QuizPlayer myPlayer, QuizRoom room) {
     // 找到对手
-    final opponent = _room!.players.firstWhere(
+    final opponent = room.players.firstWhere(
       (p) => p.id != _myPlayerId,
       orElse: () => myPlayer, // 如果没有对手，返回自己
     );
@@ -208,31 +195,35 @@ class _QuizGameScreenState extends State<QuizGameScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_room == null) {
+    // 从Provider读取状态
+    final gameState = ref.watch(quizGameProvider);
+    final room = gameState.room;
+
+    if (room == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     // 获取当前玩家
-    final myPlayer = _room!.players.firstWhere(
+    final myPlayer = room.players.firstWhere(
       (p) => p.id == _myPlayerId,
-      orElse: () => _room!.players.first,
+      orElse: () => room.players.first,
     );
 
     // 如果已完成所有题目，显示等待界面
     if (myPlayer.isFinished) {
       return WaitingScreen(
-        room: _room!,
+        room: room,
         myPlayerId: _myPlayerId,
         onShowExitDialog: _showExitConfirmDialog,
       );
     }
 
     // 获取当前题目
-    if (myPlayer.currentQuestionIndex >= _room!.questions.length) {
+    if (myPlayer.currentQuestionIndex >= room.questions.length) {
       return const Scaffold(body: Center(child: Text('题目索引超出范围')));
     }
 
-    final question = _room!.questions[myPlayer.currentQuestionIndex];
+    final question = room.questions[myPlayer.currentQuestionIndex];
 
     return PopScope(
       canPop: false, // 禁止返回
@@ -245,7 +236,7 @@ class _QuizGameScreenState extends State<QuizGameScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: Text(
-            _getAppBarTitle(myPlayer),
+            _getAppBarTitle(myPlayer, room),
             style: Theme.of(context).textTheme.titleLarge,
           ),
           automaticallyImplyLeading: false,
@@ -257,11 +248,11 @@ class _QuizGameScreenState extends State<QuizGameScreen> {
                 children: [
                   // 得分榜
                   PlayerScoreBoard(
-                    players: _room!.players,
+                    players: room.players,
                     myPlayerId: _myPlayerId,
-                    hostId: _room!.hostId,
-                    roomStatus: _room!.status,
-                    totalQuestions: _room!.questions.length,
+                    hostId: room.hostId,
+                    roomStatus: room.status,
+                    totalQuestions: room.questions.length,
                   ),
                   // 题目区域
                   Expanded(
@@ -278,17 +269,26 @@ class _QuizGameScreenState extends State<QuizGameScreen> {
                           const SizedBox(height: 16),
 
                           // 选项 (使用乱序索引)
-                          ..._shuffledIndices.map((originalIndex) {
+                          ...gameState.shuffledIndices.asMap().entries.map((
+                            entry,
+                          ) {
+                            final displayIndex = entry.key;
+                            final originalIndex = entry.value;
                             return OptionButton(
                               question: question,
                               index: originalIndex,
                               hasAnswered: myPlayer.currentAnswer != null,
-                              selectedAnswer: _selectedAnswer,
-                              selectedAnswers: _selectedAnswers,
+                              selectedAnswer:
+                                  gameState.selectedAnswer == displayIndex
+                                  ? originalIndex
+                                  : null,
+                              selectedAnswers: gameState.selectedAnswers
+                                  .map((i) => gameState.shuffledIndices[i])
+                                  .toList(),
                               onSelectSingle: () =>
-                                  _selectSingleAnswer(originalIndex, question),
+                                  _selectSingleAnswer(displayIndex, question),
                               onToggleMultiple: () =>
-                                  _toggleMultipleChoice(originalIndex),
+                                  _toggleMultipleChoice(displayIndex),
                             );
                           }),
 
@@ -297,7 +297,7 @@ class _QuizGameScreenState extends State<QuizGameScreen> {
                               myPlayer.currentAnswer == null) ...[
                             const SizedBox(height: 24),
                             ConfirmButton(
-                              selectedCount: _selectedAnswers.length,
+                              selectedCount: gameState.selectedAnswers.length,
                               totalCount: question.options.length,
                               onConfirm: () => _confirmMultipleChoice(question),
                             ),
@@ -311,10 +311,10 @@ class _QuizGameScreenState extends State<QuizGameScreen> {
             ),
 
             // 反馈弹窗
-            if (_showFeedback)
+            if (gameState.showFeedback)
               AnswerFeedbackOverlay(
-                isCorrect: _isFeedbackCorrect,
-                isVisible: _showFeedback,
+                isCorrect: gameState.isFeedbackCorrect,
+                isVisible: gameState.showFeedback,
               ),
           ],
         ),
@@ -367,75 +367,103 @@ class _QuizGameScreenState extends State<QuizGameScreen> {
   }
 
   // 单选题/判断题选择
-  void _selectSingleAnswer(int index, Question question) {
+  void _selectSingleAnswer(int displayIndex, Question question) {
+    final gameState = ref.read(quizGameProvider);
+
     // 如果正在显示反馈，忽略点击
-    if (_showFeedback) return;
+    if (gameState.showFeedback) return;
 
-    setState(() {
-      _selectedAnswer = index;
-      _showFeedback = true;
-      _isFeedbackCorrect = question.isAnswerCorrect(index);
-    });
+    // 获取原始索引
+    final originalIndex = gameState.shuffledIndices[displayIndex];
 
-    // 延迟 200ms 后提交答案
-    Future.delayed(const Duration(milliseconds: 300), () {
+    // 更新Provider状态
+    ref.read(quizGameProvider.notifier).selectSingleAnswer(displayIndex);
+
+    // 检查答案是否正确
+    final isCorrect = question.isAnswerCorrect(
+      SingleChoiceAnswer(originalIndex),
+    );
+    ref.read(quizGameProvider.notifier).showFeedback(isCorrect);
+
+    // 延迟后提交答案并隐藏反馈
+    _feedbackTimer?.cancel();
+    _feedbackTimer = Timer(const Duration(milliseconds: 500), () {
       if (!mounted) return;
 
+      // 隐藏反馈
+      ref.read(quizGameProvider.notifier).hideFeedback();
+
+      // 提交答案到服务
       if (widget.isHost) {
-        widget.hostService!.gameController.submitAnswer('host', index);
+        widget.hostService!.gameController.submitAnswer('host', originalIndex);
       } else {
-        widget.clientService!.submitAnswer(index);
+        widget.clientService!.submitAnswer(originalIndex);
       }
     });
   }
 
   // 多选题切换选项
-  void _toggleMultipleChoice(int index) {
-    if (_showFeedback) return;
+  void _toggleMultipleChoice(int displayIndex) {
+    final gameState = ref.read(quizGameProvider);
+    if (gameState.showFeedback) return;
 
-    setState(() {
-      if (_selectedAnswers.contains(index)) {
-        _selectedAnswers.remove(index);
-      } else {
-        _selectedAnswers.add(index);
-      }
-    });
+    ref.read(quizGameProvider.notifier).toggleMultipleChoice(displayIndex);
   }
 
   // 多选题确认答案
   void _confirmMultipleChoice(Question question) {
-    if (_selectedAnswers.isEmpty || _showFeedback) return;
+    final gameState = ref.read(quizGameProvider);
+    if (gameState.selectedAnswers.isEmpty || gameState.showFeedback) return;
 
-    // 排序
-    final sortedAnswers = List<int>.from(_selectedAnswers)..sort();
+    // 转换为原始索引并排序
+    final originalIndices =
+        gameState.selectedAnswers
+            .map((i) => gameState.shuffledIndices[i])
+            .toList()
+          ..sort();
 
-    setState(() {
-      _showFeedback = true;
-      _isFeedbackCorrect = question.isAnswerCorrect(sortedAnswers);
-    });
+    // 检查答案是否正确
+    // 检查答案是否正确
+    final isCorrect = question.isAnswerCorrect(
+      MultipleChoiceAnswer(originalIndices),
+    );
+    ref.read(quizGameProvider.notifier).showFeedback(isCorrect);
 
-    // 延迟 200ms 后提交答案
-    Future.delayed(const Duration(milliseconds: 300), () {
+    // 延迟后提交答案
+    _feedbackTimer?.cancel();
+    _feedbackTimer = Timer(const Duration(milliseconds: 500), () {
       if (!mounted) return;
 
+      // 隐藏反馈
+      ref.read(quizGameProvider.notifier).hideFeedback();
+
       if (widget.isHost) {
-        widget.hostService!.gameController.submitAnswer('host', sortedAnswers);
+        widget.hostService!.gameController.submitAnswer(
+          'host',
+          originalIndices,
+        );
       } else {
-        widget.clientService!.submitAnswer(sortedAnswers);
+        widget.clientService!.submitAnswer(originalIndices);
       }
     });
   }
 
   void _navigateToResult() {
+    final gameState = ref.read(quizGameProvider);
+
     // 防止重复导航
-    if (_hasNavigatedToResult) return;
-    _hasNavigatedToResult = true;
+    if (gameState.hasNavigatedToResult) return;
+
+    ref.read(quizGameProvider.notifier).markNavigatedToResult();
+
+    final room = gameState.room;
+    if (room == null) return;
 
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
         builder: (context) => QuizResultScreen(
-          room: _room!,
+          room: room,
           isHost: widget.isHost,
           hostService: widget.hostService,
           clientService: widget.clientService,

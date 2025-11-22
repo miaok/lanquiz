@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../models/question.dart';
+import '../../../models/question_model.dart';
 
 /// 选项按钮组件
 /// 根据题型（单选/判断/多选）渲染不同样式的选项

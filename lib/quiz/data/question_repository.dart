@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/services.dart';
-import '../models/question.dart';
+import '../models/question_model.dart';
 
 /// 题目数据仓库
 class QuestionRepository {

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../models/player.dart';
+import '../../../models/player_model.dart';
 import 'winner_card.dart';
 
 /// 获奖者区域组件

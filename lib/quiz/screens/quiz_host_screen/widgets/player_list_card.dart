@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import '../../../models/quiz_room.dart';
-import '../../../models/player.dart';
+import '../../../models/quiz_room_model.dart';
+import '../../../models/player_model.dart';
 import '../../../services/quiz_host_service.dart';
 
 /// 玩家列表卡片组件

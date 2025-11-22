@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../models/quiz_room.dart';
+import '../../../models/quiz_room_model.dart';
 
 /// 开始游戏按钮组件
 class StartGameButton extends StatelessWidget {

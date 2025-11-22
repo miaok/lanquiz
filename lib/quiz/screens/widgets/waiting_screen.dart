@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../models/quiz_room.dart';
+import '../../models/quiz_room_model.dart';
 import '../quiz_game_screen/widgets/player_score_board.dart';
 
 /// 等待其他玩家完成的界面组件

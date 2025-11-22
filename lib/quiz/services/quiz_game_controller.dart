@@ -1,7 +1,7 @@
 import 'dart:async';
-import '../models/quiz_room.dart';
-import '../models/player.dart';
-import '../models/question.dart';
+import '../models/quiz_room_model.dart';
+import '../models/player_model.dart';
+import '../models/question_model.dart';
 
 /// 知识竞答游戏控制器
 class QuizGameController {
@@ -85,8 +85,11 @@ class QuizGameController {
         .difference(room.questionStartTime!)
         .inMilliseconds;
 
+    // 将动态类型的答案转换为 Answer 对象
+    final answerObject = question.createAnswerFromDynamic(answerIndex);
+
     // 使用题目的判题方法
-    final isCorrect = question.isAnswerCorrect(answerIndex);
+    final isCorrect = question.isAnswerCorrect(answerObject);
 
     // 立即计算分数
     int newScore = player.score;
@@ -99,13 +102,9 @@ class QuizGameController {
       newScore = player.score + totalScore;
       newComboCount = player.comboCount + 1; // 连击数+1
       answerResult = AnswerResult.correct;
-      // print(
-      //   '玩家 ${player.name} 答对了!基础分: $baseScore, 连击: $newComboCount, 新总分: $newScore',
-      // );
     } else {
       newComboCount = 0; // 答错重置连击数
       answerResult = AnswerResult.incorrect;
-      // print('玩家 ${player.name} 答错了,连击中断');
     }
 
     // 判断是否是最后一题
@@ -117,10 +116,16 @@ class QuizGameController {
       player.wrongAnswers,
     );
     if (!isCorrect) {
+      // 获取正确答案的原始值以便存储
+      final correctAnswerValue = switch (question.correctAnswer) {
+        SingleChoiceAnswer a => a.index,
+        MultipleChoiceAnswer a => a.indices,
+      };
+
       updatedWrongAnswers.add({
         'questionId': question.id,
         'playerAnswer': answerIndex,
-        'correctAnswer': question.correctAnswer,
+        'correctAnswer': correctAnswerValue,
       });
     }
 

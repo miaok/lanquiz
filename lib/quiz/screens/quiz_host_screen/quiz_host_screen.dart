@@ -1,14 +1,14 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../models/quiz_room.dart';
-import '../models/player.dart';
-import '../services/quiz_host_service.dart';
-import '../data/question_repository.dart';
-import 'quiz_game_screen.dart';
-import 'quiz_host_screen/widgets/question_config_card.dart';
-import 'quiz_host_screen/widgets/player_list_card.dart';
-import 'quiz_host_screen/widgets/start_game_button.dart';
-import 'quiz_host_screen/widgets/preset_mode_selector.dart';
+import '../../models/quiz_room_model.dart';
+import '../../models/player_model.dart';
+import '../../services/quiz_host_service.dart';
+import '../../data/question_repository.dart';
+import '../quiz_game_screen/quiz_game_screen.dart';
+import 'widgets/question_config_card.dart';
+import 'widgets/player_list_card.dart';
+import 'widgets/start_game_button.dart';
+import 'widgets/preset_mode_selector.dart';
 
 /// 房主页面
 class QuizHostScreen extends StatefulWidget {

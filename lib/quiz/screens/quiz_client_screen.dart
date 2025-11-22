@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../models/player.dart';
-import '../models/quiz_room.dart';
+import '../models/player_model.dart';
+import '../models/quiz_room_model.dart';
 import '../services/quiz_client_service.dart';
-import 'quiz_game_screen.dart';
+import 'quiz_game_screen/quiz_game_screen.dart';
 
 /// 客户端页面（玩家）
 class QuizClientScreen extends StatefulWidget {

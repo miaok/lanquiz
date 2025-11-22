@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../models/player.dart';
+import '../../../models/player_model.dart';
 
 /// 获奖者卡片组件
 class WinnerCard extends StatelessWidget {

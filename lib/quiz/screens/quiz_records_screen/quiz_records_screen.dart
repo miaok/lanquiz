@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import '../models/game_record.dart';
-import '../services/quiz_record_service.dart';
-import 'quiz_records_screen/widgets/empty_state.dart';
-import 'quiz_records_screen/widgets/statistics_card.dart';
-import 'quiz_records_screen/widgets/record_card.dart';
+import '../../models/game_record_model.dart';
+import '../../services/quiz_record_service.dart';
+import 'widgets/empty_state.dart';
+import 'widgets/statistics_card.dart';
+import 'widgets/record_card.dart';
 
 /// 游戏记录列表页面
 class GameRecordsScreen extends StatefulWidget {
