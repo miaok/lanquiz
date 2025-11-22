@@ -12,6 +12,8 @@ class QuizGameState {
   final int currentQuestionIndex; // 当前题目索引
   final List<int> shuffledIndices; // 选项乱序索引
   final bool hasNavigatedToResult; // 是否已导航到结果页
+  final bool hasSubmittedAnswer; // 是否已提交答案(用于显示按钮反馈)
+  final bool submittedAnswerCorrect; // 提交的答案是否正确
 
   const QuizGameState({
     this.room,
@@ -22,6 +24,8 @@ class QuizGameState {
     this.currentQuestionIndex = -1,
     this.shuffledIndices = const [],
     this.hasNavigatedToResult = false,
+    this.hasSubmittedAnswer = false,
+    this.submittedAnswerCorrect = false,
   });
 
   /// 获取当前题目
@@ -35,13 +39,15 @@ class QuizGameState {
   QuizGameState copyWith({
     QuizRoom? room,
     int? selectedAnswer,
-    bool clearSelectedAnswer = false, // 新增标志位
+    bool clearSelectedAnswer = false,
     List<int>? selectedAnswers,
     bool? showFeedback,
     bool? isFeedbackCorrect,
     int? currentQuestionIndex,
     List<int>? shuffledIndices,
     bool? hasNavigatedToResult,
+    bool? hasSubmittedAnswer,
+    bool? submittedAnswerCorrect,
   }) {
     return QuizGameState(
       room: room ?? this.room,
@@ -54,6 +60,9 @@ class QuizGameState {
       currentQuestionIndex: currentQuestionIndex ?? this.currentQuestionIndex,
       shuffledIndices: shuffledIndices ?? this.shuffledIndices,
       hasNavigatedToResult: hasNavigatedToResult ?? this.hasNavigatedToResult,
+      hasSubmittedAnswer: hasSubmittedAnswer ?? this.hasSubmittedAnswer,
+      submittedAnswerCorrect:
+          submittedAnswerCorrect ?? this.submittedAnswerCorrect,
     );
   }
 
@@ -73,12 +82,12 @@ class QuizGameNotifier extends StateNotifier<QuizGameState> {
     _updateQuestionState(room, playerQuestionIndex);
   }
 
-  /// 更新题目状态（处理乱序）
+  /// 更新题目状态(处理乱序)
   void _updateQuestionState(QuizRoom room, int? playerQuestionIndex) {
-    // 使用玩家的题目索引（独立进度模式）或房间的题目索引
+    // 使用玩家的题目索引(独立进度模式)或房间的题目索引
     final newIndex = playerQuestionIndex ?? room.currentQuestionIndex;
 
-    // 如果题目索引变化，重新生成乱序索引并清空选择
+    // 如果题目索引变化,重新生成乱序索引并清空选择
     if (newIndex != state.currentQuestionIndex) {
       final question = room.questions[newIndex];
       final shuffled = List<int>.generate(
@@ -92,6 +101,8 @@ class QuizGameNotifier extends StateNotifier<QuizGameState> {
         clearSelectedAnswer: true,
         selectedAnswers: const [],
         showFeedback: false,
+        hasSubmittedAnswer: false,
+        submittedAnswerCorrect: false,
       );
     }
   }
@@ -114,7 +125,12 @@ class QuizGameNotifier extends StateNotifier<QuizGameState> {
 
   /// 显示反馈
   void showFeedback(bool isCorrect) {
-    state = state.copyWith(showFeedback: true, isFeedbackCorrect: isCorrect);
+    state = state.copyWith(
+      showFeedback: true,
+      isFeedbackCorrect: isCorrect,
+      hasSubmittedAnswer: true,
+      submittedAnswerCorrect: isCorrect,
+    );
   }
 
   /// 隐藏反馈

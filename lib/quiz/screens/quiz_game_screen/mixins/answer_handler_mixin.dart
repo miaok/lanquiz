@@ -18,13 +18,13 @@ mixin AnswerHandlerMixin<T extends ConsumerStatefulWidget> on ConsumerState<T> {
   void selectSingleAnswer(int displayIndex, Question question) {
     final gameState = ref.read(quizGameProvider);
 
-    // 如果正在显示反馈，忽略点击
+    // 如果正在显示反馈,忽略点击
     if (gameState.showFeedback) return;
 
     // 获取原始索引
     final originalIndex = gameState.shuffledIndices[displayIndex];
 
-    // 更新Provider状态 - 显示选中效果（会保持到下一题）
+    // 更新Provider状态 - 显示选中效果
     ref.read(quizGameProvider.notifier).selectSingleAnswer(displayIndex);
 
     // 检查答案是否正确
@@ -32,22 +32,22 @@ mixin AnswerHandlerMixin<T extends ConsumerStatefulWidget> on ConsumerState<T> {
       SingleChoiceAnswer(originalIndex),
     );
 
-    // 延迟显示反馈，让用户看到选中的高亮效果
+    // 延迟显示反馈,让用户看到选中的高亮效果
     feedbackTimer?.cancel();
     feedbackTimer = Timer(const Duration(milliseconds: 200), () {
       if (!mounted) return;
 
-      // 显示反馈
+      // 显示反馈(在按钮上显示)
       ref.read(quizGameProvider.notifier).showFeedback(isCorrect);
 
-      // 再延迟后提交答案并隐藏反馈
-      feedbackTimer = Timer(const Duration(milliseconds: 500), () {
+      // 延迟后提交答案并隐藏反馈
+      feedbackTimer = Timer(const Duration(milliseconds: 800), () {
         if (!mounted) return;
 
-        // 隐藏反馈（选中状态会在题目索引变化时自动清除）
+        // 隐藏反馈(选中状态会在题目索引变化时自动清除)
         ref.read(quizGameProvider.notifier).hideFeedback();
 
-        // 提交答案到服务（会触发题目索引更新，自动清除选中状态）
+        // 提交答案到服务(会触发题目索引更新,自动清除选中状态)
         if (isHost) {
           hostService!.gameController.submitAnswer('host', originalIndex);
         } else {
@@ -82,22 +82,22 @@ mixin AnswerHandlerMixin<T extends ConsumerStatefulWidget> on ConsumerState<T> {
       MultipleChoiceAnswer(originalIndices),
     );
 
-    // 延迟显示反馈，让用户看到选中的高亮效果
+    // 延迟显示反馈,让用户看到选中的高亮效果
     feedbackTimer?.cancel();
     feedbackTimer = Timer(const Duration(milliseconds: 200), () {
       if (!mounted) return;
 
-      // 显示反馈
+      // 显示反馈(在按钮上显示)
       ref.read(quizGameProvider.notifier).showFeedback(isCorrect);
 
-      // 再延迟后提交答案并隐藏反馈
-      feedbackTimer = Timer(const Duration(milliseconds: 500), () {
+      // 延迟后提交答案并隐藏反馈
+      feedbackTimer = Timer(const Duration(milliseconds: 800), () {
         if (!mounted) return;
 
-        // 隐藏反馈（选中状态会在题目索引变化时自动清除）
+        // 隐藏反馈(选中状态会在题目索引变化时自动清除)
         ref.read(quizGameProvider.notifier).hideFeedback();
 
-        // 提交答案到服务（会触发题目索引更新，自动清除选中状态）
+        // 提交答案到服务(会触发题目索引更新,自动清除选中状态)
         if (isHost) {
           hostService!.gameController.submitAnswer('host', originalIndices);
         } else {

@@ -12,7 +12,6 @@ import 'widgets/question_card.dart';
 import 'widgets/option_button.dart';
 import 'widgets/confirm_button.dart';
 import 'widgets/waiting_screen.dart';
-import 'widgets/answer_feedback_overlay.dart';
 import 'widgets/exit_confirm_dialog.dart';
 import 'mixins/game_listeners_mixin.dart';
 import 'mixins/answer_handler_mixin.dart';
@@ -154,82 +153,72 @@ class _QuizGameScreenState extends ConsumerState<QuizGameScreen>
           ),
           automaticallyImplyLeading: false,
         ),
-        body: Stack(
-          children: [
-            SafeArea(
-              child: Column(
-                children: [
-                  // 得分榜
-                  PlayerScoreBoard(
-                    players: room.players,
-                    myPlayerId: myPlayerId,
-                    hostId: room.hostId,
-                    roomStatus: room.status,
-                    totalQuestions: room.questions.length,
-                  ),
-                  // 题目区域
-                  Expanded(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          // 题目
-                          QuestionCard(
-                            questionText: question.question,
-                            questionType: question.type,
-                          ),
-                          const SizedBox(height: 16),
-
-                          // 选项 (使用乱序索引)
-                          ...gameState.shuffledIndices.asMap().entries.map((
-                            entry,
-                          ) {
-                            final displayIndex = entry.key;
-                            final originalIndex = entry.value;
-                            return OptionButton(
-                              question: question,
-                              index: originalIndex,
-                              hasAnswered: myPlayer.currentAnswer != null,
-                              selectedAnswer:
-                                  gameState.selectedAnswer == displayIndex
-                                  ? originalIndex
-                                  : null,
-                              selectedAnswers: gameState.selectedAnswers
-                                  .map((i) => gameState.shuffledIndices[i])
-                                  .toList(),
-                              onSelectSingle: () =>
-                                  selectSingleAnswer(displayIndex, question),
-                              onToggleMultiple: () =>
-                                  toggleMultipleChoice(displayIndex),
-                            );
-                          }),
-
-                          // 多选题确认按钮
-                          if (question.type == QuestionType.multipleChoice &&
-                              myPlayer.currentAnswer == null) ...[
-                            const SizedBox(height: 24),
-                            ConfirmButton(
-                              selectedCount: gameState.selectedAnswers.length,
-                              totalCount: question.options.length,
-                              onConfirm: () => confirmMultipleChoice(question),
-                            ),
-                          ],
-                        ],
+        body: SafeArea(
+          child: Column(
+            children: [
+              // 得分榜
+              PlayerScoreBoard(
+                players: room.players,
+                myPlayerId: myPlayerId,
+                hostId: room.hostId,
+                roomStatus: room.status,
+                totalQuestions: room.questions.length,
+              ),
+              // 题目区域
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // 题目
+                      QuestionCard(
+                        questionText: question.question,
+                        questionType: question.type,
                       ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+                      const SizedBox(height: 16),
 
-            // 反馈弹窗
-            if (gameState.showFeedback)
-              AnswerFeedbackOverlay(
-                isCorrect: gameState.isFeedbackCorrect,
-                isVisible: gameState.showFeedback,
+                      // 选项 (使用乱序索引)
+                      ...gameState.shuffledIndices.asMap().entries.map((entry) {
+                        final displayIndex = entry.key;
+                        final originalIndex = entry.value;
+                        return OptionButton(
+                          question: question,
+                          index: originalIndex,
+                          hasAnswered: myPlayer.currentAnswer != null,
+                          selectedAnswer:
+                              gameState.selectedAnswer == displayIndex
+                              ? originalIndex
+                              : null,
+                          selectedAnswers: gameState.selectedAnswers
+                              .map((i) => gameState.shuffledIndices[i])
+                              .toList(),
+                          onSelectSingle: () =>
+                              selectSingleAnswer(displayIndex, question),
+                          onToggleMultiple: () =>
+                              toggleMultipleChoice(displayIndex),
+                          hasSubmittedAnswer: gameState.hasSubmittedAnswer,
+                          submittedAnswerCorrect:
+                              gameState.submittedAnswerCorrect,
+                        );
+                      }),
+
+                      // 多选题确认按钮
+                      if (question.type == QuestionType.multipleChoice &&
+                          myPlayer.currentAnswer == null) ...[
+                        const SizedBox(height: 24),
+                        ConfirmButton(
+                          selectedCount: gameState.selectedAnswers.length,
+                          totalCount: question.options.length,
+                          onConfirm: () => confirmMultipleChoice(question),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
               ),
-          ],
+            ],
+          ),
         ),
       ),
     );
