@@ -162,11 +162,38 @@ class QuizHostService with NetworkResourceManager {
       final message = NetworkMessage.fromJson(line);
 
       switch (message.type) {
+        case MessageType.heartbeat:
+          // 收到心跳包，更新最后活跃时间（可选）
+          // 目前只需保持连接活跃即可
+          break;
+
         case MessageType.playerJoin:
           final player = QuizPlayer.fromJson(message.data);
-          if (gameController.addPlayer(player)) {
+
+          // 检查玩家是否已存在（重连逻辑）
+          final existingPlayer = gameController.room.players
+              .where((p) => p.id == player.id)
+              .firstOrNull;
+
+          if (existingPlayer != null) {
+            // 玩家重连
             _clientPlayerIds[client] = player.id;
-            //print('玩家 ${player.name} 加入房间');
+            //print('玩家 ${player.name} 重连成功');
+
+            // 立即发送当前房间状态
+            _networkService.sendMessage(
+              client,
+              NetworkMessage(
+                type: MessageType.roomUpdate,
+                data: gameController.room.toJson(),
+              ),
+            );
+          } else {
+            // 新玩家加入
+            if (gameController.addPlayer(player)) {
+              _clientPlayerIds[client] = player.id;
+              //print('玩家 ${player.name} 加入房间');
+            }
           }
           break;
 
@@ -198,8 +225,13 @@ class QuizHostService with NetworkResourceManager {
         (p) => p.id == playerId,
         orElse: () => QuizPlayer(id: '', name: 'Unknown'),
       );
-      _clientDisconnectController?.add(player.name);
-      gameController.removePlayer(playerId);
+
+      // 只有在等待房间时才移除玩家，游戏中允许断线重连
+      if (gameController.room.status == RoomStatus.waiting) {
+        _clientDisconnectController?.add(player.name);
+        gameController.removePlayer(playerId);
+      }
+
       _clientPlayerIds.remove(client);
     }
     _clients.remove(client);

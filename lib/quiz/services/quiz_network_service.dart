@@ -12,6 +12,7 @@ enum MessageType {
   playerAnswer, // 玩家答题
   showAnswer, // 显示答案
   gameEnd, // 游戏结束
+  heartbeat, // 心跳包
 }
 
 /// 网络消息
@@ -134,13 +135,42 @@ class QuizNetworkService {
       socket.write('${message.toJson()}\n');
     } catch (e) {
       //print('发送消息失败: $e');
+      throw NetworkException('发送消息失败: $e');
     }
   }
 
   /// 广播消息给所有客户端
   void broadcastMessage(List<Socket> clients, NetworkMessage message) {
     for (final client in clients) {
-      sendMessage(client, message);
+      try {
+        sendMessage(client, message);
+      } catch (e) {
+        // 忽略单个客户端发送失败
+      }
     }
   }
+
+  /// 获取友好的错误信息
+  String getFriendlyErrorMessage(dynamic error) {
+    final e = error.toString();
+    if (e.contains('Connection refused')) {
+      return '无法连接到主机，请检查主机IP是否正确或主机是否已开启';
+    } else if (e.contains('Network is unreachable')) {
+      return '网络不可用，请检查您的网络连接';
+    } else if (e.contains('Connection timed out')) {
+      return '连接超时，请检查网络状况';
+    } else if (e.contains('Connection reset by peer')) {
+      return '连接被断开';
+    } else if (e.contains('No route to host')) {
+      return '无法访问主机，请检查是否在同一局域网内';
+    }
+    return '网络错误: $error';
+  }
+}
+
+class NetworkException implements Exception {
+  final String message;
+  NetworkException(this.message);
+  @override
+  String toString() => message;
 }

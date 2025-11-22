@@ -32,9 +32,17 @@ class QuizClientService with NetworkResourceManager {
   /// 获取本地IP地址
   String? get myIp => _myIp;
 
+  Timer? _heartbeatTimer;
+  bool _isIntentionalDisconnect = false;
+  (String, int)? _lastHost;
+  QuizPlayer? _lastPlayer;
+
   /// 发现并连接到主机
   Future<bool> discoverAndConnect(QuizPlayer player) async {
     try {
+      _isIntentionalDisconnect = false;
+      _lastPlayer = player;
+
       // 先清理可能存在的旧连接
       await _cleanupConnection();
 
@@ -72,7 +80,7 @@ class QuizClientService with NetworkResourceManager {
       _updateStatus('已连接');
       return true;
     } catch (e) {
-      _updateStatus('连接失败: $e');
+      _updateStatus(_networkService.getFriendlyErrorMessage(e));
       await _cleanupConnection();
       return false;
     }
@@ -85,6 +93,8 @@ class QuizClientService with NetworkResourceManager {
   ) async {
     int retryCount = 0;
     const maxRetries = 3;
+
+    _lastHost = (host.$1, host.$2);
 
     while (retryCount < maxRetries) {
       try {
@@ -100,7 +110,7 @@ class QuizClientService with NetworkResourceManager {
         retryCount++;
 
         if (retryCount >= maxRetries) {
-          _updateStatus('连接失败: 无法连接到主机');
+          _updateStatus(_networkService.getFriendlyErrorMessage(e));
           return false;
         }
 
@@ -115,23 +125,118 @@ class QuizClientService with NetworkResourceManager {
     );
     _networkService.sendMessage(_tcp!, joinMessage);
 
+    // 启动心跳
+    _startHeartbeat();
+
     // 监听消息
     _tcpSub = _networkService
         .socketLines(_tcp!)
         .listen(
           _handleServerMessage,
-          onDone: () {
-            _updateStatus('已断开连接');
-            _disconnectController?.add(null);
-          },
+          onDone: _handleDisconnect,
           onError: (error) {
-            _updateStatus('连接错误: $error');
-            _disconnectController?.add(null);
+            // print('Socket error: $error');
+            _handleDisconnect();
           },
           cancelOnError: false,
         );
 
     return true;
+  }
+
+  /// 启动心跳
+  void _startHeartbeat() {
+    _heartbeatTimer?.cancel();
+    _heartbeatTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+      if (_tcp != null && myPlayerId != null) {
+        try {
+          _networkService.sendMessage(
+            _tcp!,
+            NetworkMessage(
+              type: MessageType.heartbeat,
+              data: {'playerId': myPlayerId},
+            ),
+          );
+        } catch (e) {
+          // 心跳发送失败通常意味着连接问题，会在socket error中处理
+        }
+      }
+    });
+  }
+
+  /// 处理连接断开
+  void _handleDisconnect() {
+    if (_isIntentionalDisconnect) {
+      _updateStatus('已断开连接');
+      _disconnectController?.add(null);
+      return;
+    }
+
+    _attemptReconnect();
+  }
+
+  /// 尝试重连
+  Future<void> _attemptReconnect() async {
+    if (_lastHost == null || _lastPlayer == null) return;
+
+    _updateStatus('连接断开，正在尝试重连...');
+
+    // 清理旧的socket资源，但保留状态
+    await cancelSubscription(_tcpSub);
+    _tcpSub = null;
+    await closeSocket(_tcp);
+    _tcp = null;
+    _heartbeatTimer?.cancel();
+
+    int retryCount = 0;
+    const maxRetries = 10; // 增加重试次数
+
+    while (retryCount < maxRetries && !_isIntentionalDisconnect) {
+      try {
+        await Future.delayed(const Duration(seconds: 2));
+        retryCount++;
+        _updateStatus('正在尝试重连 ($retryCount/$maxRetries)...');
+
+        final socket = await Socket.connect(
+          _lastHost!.$1,
+          _lastHost!.$2,
+          timeout: const Duration(seconds: 5),
+        );
+
+        _tcp = socket;
+        _tcp!.setOption(SocketOption.tcpNoDelay, true);
+
+        // 发送加入请求（重连）
+        final joinMessage = NetworkMessage(
+          type: MessageType.playerJoin,
+          data: _lastPlayer!.toJson(),
+        );
+        _networkService.sendMessage(_tcp!, joinMessage);
+
+        // 重新启动监听
+        _tcpSub = _networkService
+            .socketLines(_tcp!)
+            .listen(
+              _handleServerMessage,
+              onDone: _handleDisconnect,
+              onError: (e) => _handleDisconnect(),
+              cancelOnError: false,
+            );
+
+        _startHeartbeat();
+        _updateStatus('重连成功');
+
+        // 可以在这里请求一次最新的房间状态，虽然Host在重连时会发送
+        return;
+      } catch (e) {
+        // continue retry
+      }
+    }
+
+    if (!_isIntentionalDisconnect) {
+      _updateStatus('重连失败，请检查网络后手动重试');
+      _disconnectController?.add(null);
+    }
   }
 
   /// 发现主机
@@ -180,22 +285,26 @@ class QuizClientService with NetworkResourceManager {
 
   /// 处理服务器消息
   void _handleServerMessage(String line) {
-    final message = NetworkMessage.fromJson(line);
+    try {
+      final message = NetworkMessage.fromJson(line);
 
-    switch (message.type) {
-      case MessageType.roomUpdate:
-        currentRoom = QuizRoom.fromJson(message.data);
-        _roomUpdateController?.add(currentRoom!);
-        break;
+      switch (message.type) {
+        case MessageType.roomUpdate:
+          currentRoom = QuizRoom.fromJson(message.data);
+          _roomUpdateController?.add(currentRoom!);
+          break;
 
-      case MessageType.startGame:
-      case MessageType.showAnswer:
-      case MessageType.nextQuestion:
-        // 这些消息通过roomUpdate处理
-        break;
+        case MessageType.startGame:
+        case MessageType.showAnswer:
+        case MessageType.nextQuestion:
+          // 这些消息通过roomUpdate处理
+          break;
 
-      default:
-        break;
+        default:
+          break;
+      }
+    } catch (e) {
+      // print('Error parsing message: $e');
     }
   }
 
@@ -241,6 +350,9 @@ class QuizClientService with NetworkResourceManager {
 
   /// 清理连接资源(内部方法)
   Future<void> _cleanupConnection() async {
+    _heartbeatTimer?.cancel();
+    _heartbeatTimer = null;
+
     // 取消TCP订阅
     await cancelSubscription(_tcpSub);
     _tcpSub = null;
@@ -261,6 +373,8 @@ class QuizClientService with NetworkResourceManager {
 
   /// 断开连接
   Future<void> dispose() async {
+    _isIntentionalDisconnect = true;
+
     // 清理连接资源
     await _cleanupConnection();
 
