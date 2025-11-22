@@ -13,17 +13,13 @@ class QuizClientService {
   Socket? _tcp;
   StreamSubscription<String>? _tcpSub;
 
-  final StreamController<QuizRoom> _roomUpdateController =
-      StreamController.broadcast();
-  final StreamController<String> _statusController =
-      StreamController.broadcast();
+  StreamController<QuizRoom>? _roomUpdateController;
+  StreamController<String>? _statusController;
+  StreamController<void>? _disconnectController;
 
-  Stream<QuizRoom> get roomUpdates => _roomUpdateController.stream;
-  Stream<String> get statusUpdates => _statusController.stream;
-
-  final StreamController<void> _disconnectController =
-      StreamController.broadcast();
-  Stream<void> get onDisconnected => _disconnectController.stream;
+  Stream<QuizRoom> get roomUpdates => _roomUpdateController!.stream;
+  Stream<String> get statusUpdates => _statusController!.stream;
+  Stream<void> get onDisconnected => _disconnectController!.stream;
 
   QuizRoom? currentRoom;
   String? myPlayerId;
@@ -40,6 +36,11 @@ class QuizClientService {
     try {
       // 先清理可能存在的旧连接
       await _cleanupConnection();
+
+      // 重新创建StreamController(支持服务重用)
+      _roomUpdateController = StreamController.broadcast();
+      _statusController = StreamController.broadcast();
+      _disconnectController = StreamController.broadcast();
 
       // 检查WiFi连接
       final isWiFi = await _networkService.isWiFiConnected();
@@ -106,15 +107,17 @@ class QuizClientService {
             onDone: () {
               // print('与主机的连接已断开');
               _updateStatus('已断开连接');
-              if (!_disconnectController.isClosed) {
-                _disconnectController.add(null);
+              if (_disconnectController != null &&
+                  !_disconnectController!.isClosed) {
+                _disconnectController!.add(null);
               }
             },
             onError: (error) {
               // print('连接错误: $error');
               _updateStatus('连接错误: $error');
-              if (!_disconnectController.isClosed) {
-                _disconnectController.add(null);
+              if (_disconnectController != null &&
+                  !_disconnectController!.isClosed) {
+                _disconnectController!.add(null);
               }
             },
             cancelOnError: false,
@@ -193,7 +196,7 @@ class QuizClientService {
         // print(
         //   '房间状态更新 - 状态: ${currentRoom!.status}, 题目: ${currentRoom!.currentQuestionIndex}, 玩家数: ${currentRoom!.players.length}',
         // );
-        _roomUpdateController.add(currentRoom!);
+        _roomUpdateController?.add(currentRoom!);
         break;
 
       case MessageType.startGame:
@@ -251,8 +254,8 @@ class QuizClientService {
   }
 
   void _updateStatus(String status) {
-    if (!_statusController.isClosed) {
-      _statusController.add(status);
+    if (_statusController != null && !_statusController!.isClosed) {
+      _statusController!.add(status);
     }
   }
 
@@ -302,25 +305,25 @@ class QuizClientService {
     await _cleanupConnection();
 
     // 关闭stream controller
-    if (!_roomUpdateController.isClosed) {
+    if (_roomUpdateController != null && !_roomUpdateController!.isClosed) {
       try {
-        _roomUpdateController.close();
+        _roomUpdateController!.close();
       } catch (e) {
         // print('关闭房间更新控制器失败: $e');
       }
     }
 
-    if (!_statusController.isClosed) {
+    if (_statusController != null && !_statusController!.isClosed) {
       try {
-        _statusController.close();
+        _statusController!.close();
       } catch (e) {
         // print('关闭状态控制器失败: $e');
       }
     }
 
-    if (!_disconnectController.isClosed) {
+    if (_disconnectController != null && !_disconnectController!.isClosed) {
       try {
-        _disconnectController.close();
+        _disconnectController!.close();
       } catch (e) {
         // print('关闭断连控制器失败: $e');
       }

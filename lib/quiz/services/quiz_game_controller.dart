@@ -147,7 +147,10 @@ class QuizGameController {
     // 检查是否所有人都完成了所有题目
     if (room.allPlayersFinished) {
       // print('所有玩家都已完成所有题目，游戏结束');
-      room = room.copyWith(status: RoomStatus.finished);
+      room = room.copyWith(
+        status: RoomStatus.finished,
+        gameEndTime: DateTime.now(), // 记录游戏结束时间
+      );
       _notifyUpdate();
     }
   }

@@ -21,6 +21,7 @@ class QuizRoom {
   int currentQuestionIndex;
   RoomStatus status;
   DateTime? questionStartTime;
+  DateTime? gameEndTime; // 游戏结束时间
 
   QuizRoom({
     required this.id,
@@ -32,6 +33,7 @@ class QuizRoom {
     this.currentQuestionIndex = 0,
     this.status = RoomStatus.waiting,
     this.questionStartTime,
+    this.gameEndTime,
   }) : players = players ?? [],
        questions = questions ?? [];
 
@@ -59,6 +61,7 @@ class QuizRoom {
     'currentQuestionIndex': currentQuestionIndex,
     'status': status.name,
     'questionStartTime': questionStartTime?.toIso8601String(),
+    'gameEndTime': gameEndTime?.toIso8601String(),
   };
 
   factory QuizRoom.fromJson(Map<String, dynamic> json) => QuizRoom(
@@ -84,6 +87,9 @@ class QuizRoom {
     questionStartTime: json['questionStartTime'] != null
         ? DateTime.parse(json['questionStartTime'])
         : null,
+    gameEndTime: json['gameEndTime'] != null
+        ? DateTime.parse(json['gameEndTime'])
+        : null,
   );
 
   QuizRoom copyWith({
@@ -96,6 +102,7 @@ class QuizRoom {
     int? currentQuestionIndex,
     RoomStatus? status,
     DateTime? questionStartTime,
+    DateTime? gameEndTime,
   }) {
     return QuizRoom(
       id: id ?? this.id,
@@ -107,6 +114,7 @@ class QuizRoom {
       currentQuestionIndex: currentQuestionIndex ?? this.currentQuestionIndex,
       status: status ?? this.status,
       questionStartTime: questionStartTime ?? this.questionStartTime,
+      gameEndTime: gameEndTime ?? this.gameEndTime,
     );
   }
 }

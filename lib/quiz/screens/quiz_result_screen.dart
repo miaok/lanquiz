@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:lanquiz/quiz/models/question.dart';
 import '../models/quiz_room.dart';
 import '../models/player.dart';
+import '../models/game_record.dart';
 import '../services/quiz_host_service.dart';
 import '../services/quiz_client_service.dart';
+import '../services/quiz_record_service.dart';
 import 'quiz_home_screen.dart';
 import 'quiz_host_screen.dart';
 import 'quiz_client_screen.dart';
@@ -30,11 +32,14 @@ class QuizResultScreen extends StatefulWidget {
 
 class _QuizResultScreenState extends State<QuizResultScreen> {
   StreamSubscription<QuizRoom>? _roomSubscription;
+  final GameRecordService _recordService = GameRecordService();
+  bool _hasRecordSaved = false; // 防止重复保存
 
   @override
   void initState() {
     super.initState();
     _setupListener();
+    _saveGameRecord();
   }
 
   void _setupListener() {
@@ -46,6 +51,82 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
       _roomSubscription = widget.clientService!.roomUpdates.listen(
         _handleRoomUpdate,
       );
+    }
+  }
+
+  /// 保存游戏记录（从当前玩家视角，防止重复保存）
+  Future<void> _saveGameRecord() async {
+    // 防止重复保存
+    if (_hasRecordSaved) return;
+
+    try {
+      // 确保有足够的玩家信息
+      if (widget.room.players.length < 2) return;
+
+      // 获取当前玩家ID
+      final myPlayerId = widget.isHost
+          ? 'host'
+          : (widget.clientService?.myPlayerId ?? '');
+
+      // 获取自己和对手
+      final myPlayer = widget.room.players.firstWhere(
+        (p) => p.id == myPlayerId,
+        orElse: () => widget.room.players.first,
+      );
+      final opponentPlayer = widget.room.players.firstWhere(
+        (p) => p.id != myPlayerId,
+        orElse: () => widget.room.players.last,
+      );
+
+      // 计算游戏时长（使用游戏结束时间和开始时间）
+      int durationSeconds;
+      if (widget.room.gameEndTime != null &&
+          widget.room.questionStartTime != null) {
+        durationSeconds = widget.room.gameEndTime!
+            .difference(widget.room.questionStartTime!)
+            .inSeconds;
+      } else if (widget.room.questionStartTime != null) {
+        // 如果没有结束时间，使用当前时间（向下兼容）
+        durationSeconds = DateTime.now()
+            .difference(widget.room.questionStartTime!)
+            .inSeconds;
+      } else {
+        // 估算：每题平均30秒
+        durationSeconds = widget.room.questions.length * 30;
+      }
+
+      // 确定胜负结果（从当前玩家视角）
+      GameResult result;
+      if (myPlayer.score > opponentPlayer.score) {
+        result = GameResult.win;
+      } else if (myPlayer.score < opponentPlayer.score) {
+        result = GameResult.lose;
+      } else {
+        result = GameResult.draw;
+      }
+
+      // 创建游戏记录（从当前玩家视角：host=我，client=对手）
+      final record = GameRecord(
+        id: '${DateTime.now().millisecondsSinceEpoch}',
+        timestamp: DateTime.now(),
+        hostId: myPlayer.id,
+        hostName: myPlayer.name,
+        clientId: opponentPlayer.id,
+        clientName: opponentPlayer.name,
+        totalQuestions: widget.room.questions.length,
+        hostScore: myPlayer.score,
+        clientScore: opponentPlayer.score,
+        durationSeconds: durationSeconds,
+        result: result,
+      );
+
+      // 保存记录
+      await _recordService.saveRecord(record);
+      _hasRecordSaved = true; // 标记已保存，防止重复
+      debugPrint('游戏记录已保存: ${myPlayer.name}(我) vs ${opponentPlayer.name}');
+    } catch (e) {
+      // 静默失败，不影响用户体验
+      debugPrint('保存游戏记录失败: $e');
     }
   }
 
@@ -124,7 +205,7 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
           children: [
             // 获奖者横向展示区域
             if (sortedPlayers.isNotEmpty) _buildWinnersSection(sortedPlayers),
-            
+
             // 分隔线
             Container(
               height: 1,
@@ -230,12 +311,12 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
   /// 构建获奖者区域（竖向排列，减少占据空间）
   Widget _buildWinnersSection(List<QuizPlayer> players) {
     final winners = players.take(3).toList();
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [          
+        children: [
           // 竖向获奖者卡片（节省空间）
           ...winners.asMap().entries.map((entry) {
             final player = entry.value;
@@ -254,11 +335,15 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
   }
 
   /// 构建获奖者卡片（横向布局）
-  Widget _buildWinnerCard(QuizPlayer winner, int rank, {required bool isMainWinner}) {
+  Widget _buildWinnerCard(
+    QuizPlayer winner,
+    int rank, {
+    required bool isMainWinner,
+  }) {
     Color? cardColor;
     Color? accentColor;
     IconData? medalIcon;
-    
+
     if (rank == 1) {
       cardColor = const Color(0xFFFFB74D); // 金色
       accentColor = const Color(0xFFFF8F00);
@@ -278,10 +363,7 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            cardColor,
-            cardColor.withValues(alpha: 0.8),
-          ],
+          colors: [cardColor, cardColor.withValues(alpha: 0.8)],
         ),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
@@ -303,7 +385,10 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
               children: [
                 // 排名标识
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(16),
@@ -318,7 +403,7 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                
+
                 // 奖杯图标
                 Icon(
                   medalIcon,
@@ -327,7 +412,7 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
                 ),
               ],
             ),
-            
+
             // 中间：玩家名称
             Expanded(
               child: Text(
@@ -341,7 +426,7 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            
+
             // 右侧：得分
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -397,9 +482,7 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: rank <= 3 ? 4 : 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
@@ -453,7 +536,9 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: (rank <= 3 ? rankColor : colorScheme.primaryContainer).withValues(alpha: 0.3),
+                      color:
+                          (rank <= 3 ? rankColor : colorScheme.primaryContainer)
+                              .withValues(alpha: 0.3),
                       blurRadius: 4,
                       offset: const Offset(0, 2),
                     ),

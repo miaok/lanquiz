@@ -45,6 +45,9 @@ class _QuizGameScreenState extends State<QuizGameScreen> {
   int _currentQuestionIndex = -1;
   List<int> _shuffledIndices = [];
 
+  // 防止重复导航到结果页面
+  bool _hasNavigatedToResult = false;
+
   @override
   void initState() {
     super.initState();
@@ -65,7 +68,8 @@ class _QuizGameScreenState extends State<QuizGameScreen> {
               _updateQuestionState(room);
               _room = room;
 
-              if (room.status == RoomStatus.finished) {
+              if (room.status == RoomStatus.finished &&
+                  !_hasNavigatedToResult) {
                 _navigateToResult();
               }
             });
@@ -80,7 +84,7 @@ class _QuizGameScreenState extends State<QuizGameScreen> {
             _updateQuestionState(room);
             _room = room;
 
-            if (room.status == RoomStatus.finished) {
+            if (room.status == RoomStatus.finished && !_hasNavigatedToResult) {
               _navigateToResult();
             }
           });
@@ -322,9 +326,9 @@ class _QuizGameScreenState extends State<QuizGameScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('退出游戏', style: Theme.of(context).textTheme.titleLarge),
+        title: Text('退出对局', style: Theme.of(context).textTheme.titleLarge),
         content: Text(
-          '确定要退出游戏吗？游戏进度将会丢失。',
+          '确定要退出对局吗?',
           style: Theme.of(context).textTheme.bodyMedium,
         ),
         actions: [
@@ -332,14 +336,29 @@ class _QuizGameScreenState extends State<QuizGameScreen> {
             onPressed: () => Navigator.pop(context),
             child: const Text('取消'),
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context); // 关闭对话框
-              Navigator.of(context).popUntil((route) => route.isFirst); // 返回主页
+          FilledButton(
+            onPressed: () async {
+              // 在异步操作前保存 navigator 引用
+              final navigator = Navigator.of(context);
+              navigator.pop(); // 关闭对话框
+
+              // 清理服务资源
+              if (widget.isHost) {
+                await widget.hostService?.dispose();
+              } else {
+                await widget.clientService?.dispose();
+              }
+
+              // 返回主页 - 使用保存的 navigator 引用
+              if (mounted) {
+                navigator.popUntil((route) => route.isFirst);
+              }
             },
             child: Text(
               '退出',
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSecondary,
+              ),
             ),
           ),
         ],
@@ -408,6 +427,10 @@ class _QuizGameScreenState extends State<QuizGameScreen> {
   }
 
   void _navigateToResult() {
+    // 防止重复导航
+    if (_hasNavigatedToResult) return;
+    _hasNavigatedToResult = true;
+
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(

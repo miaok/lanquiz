@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:math';
 import 'quiz_host_screen.dart';
 import 'quiz_client_screen.dart';
+import 'quiz_records_screen.dart';
 import '../widgets/theme_switcher.dart';
 import '../services/quiz_network_service.dart';
 
@@ -65,6 +66,11 @@ class _QuizHomeScreenState extends State<QuizHomeScreen> {
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _viewGameRecords,
+        icon: const Icon(Icons.history),
+        label: const Text('对战记录'),
+      ),
       body: SafeArea(
         child: Stack(
           children: [
@@ -210,6 +216,13 @@ class _QuizHomeScreenState extends State<QuizHomeScreen> {
       MaterialPageRoute(
         builder: (context) => QuizClientScreen(playerName: name),
       ),
+    );
+  }
+
+  void _viewGameRecords() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const GameRecordsScreen()),
     );
   }
 }

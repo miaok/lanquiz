@@ -51,18 +51,21 @@ class _QuizClientScreenState extends State<QuizClientScreen> {
       name: widget.playerName,
     );
 
-    _setupListeners();
-
-    // 连接到主机
+    // 连接到主机(会初始化StreamController)
     final success = await _clientService.discoverAndConnect(player);
-    if (!success && mounted) {
+
+    // 连接成功后再设置监听器
+    if (success) {
+      _setupListeners();
+      if (mounted) {
+        setState(() {
+          _status = '已连接';
+        });
+      }
+    } else if (mounted) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('连接失败')));
-    } else if (success && mounted) {
-      setState(() {
-        _status = '已连接';
-      });
     }
   }
 

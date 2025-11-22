@@ -18,9 +18,9 @@ class QuizHostService {
   final List<Socket> _clients = [];
   final Map<Socket, String> _clientPlayerIds = {}; // Socket到玩家ID的映射
 
-  final StreamController<String> _clientDisconnectController =
-      StreamController.broadcast();
-  Stream<String> get onClientDisconnected => _clientDisconnectController.stream;
+  StreamController<String>? _clientDisconnectController;
+  Stream<String> get onClientDisconnected =>
+      _clientDisconnectController!.stream;
 
   String? _hostIp;
 
@@ -38,6 +38,9 @@ class QuizHostService {
     try {
       // 先清理可能存在的旧连接
       await _cleanupResources();
+
+      // 重新创建StreamController(支持服务重用)
+      _clientDisconnectController = StreamController.broadcast();
 
       gameController = QuizGameController(room);
 
@@ -224,7 +227,7 @@ class QuizHostService {
         (p) => p.id == playerId,
         orElse: () => QuizPlayer(id: '', name: 'Unknown'),
       );
-      _clientDisconnectController.add(player.name);
+      _clientDisconnectController?.add(player.name);
       gameController.removePlayer(playerId);
       _clientPlayerIds.remove(client);
     }
@@ -295,9 +298,10 @@ class QuizHostService {
     await _cleanupResources();
 
     // 关闭事件控制器
-    if (!_clientDisconnectController.isClosed) {
+    if (_clientDisconnectController != null &&
+        !_clientDisconnectController!.isClosed) {
       try {
-        _clientDisconnectController.close();
+        _clientDisconnectController!.close();
       } catch (e) {
         //print('关闭断连控制器失败: $e');
       }
