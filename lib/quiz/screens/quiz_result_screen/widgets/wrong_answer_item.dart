@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../models/question_model.dart';
+import '../../../utils/app_logger.dart';
 
 /// 错题项组件
 class WrongAnswerItem extends StatelessWidget {
@@ -126,6 +127,7 @@ class WrongAnswerItem extends StatelessWidget {
             .join(', ');
       }
     } catch (e) {
+      appLogger.w('Error formatting answer', e);
       return answer.toString();
     }
     return answer.toString();

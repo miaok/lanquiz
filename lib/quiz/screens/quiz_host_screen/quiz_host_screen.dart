@@ -9,6 +9,7 @@ import 'widgets/question_config_card.dart';
 import 'widgets/player_list_card.dart';
 import 'widgets/start_game_button.dart';
 import 'widgets/preset_mode_selector.dart';
+import 'widgets/game_mode_selector.dart';
 
 /// 房主页面
 class QuizHostScreen extends StatefulWidget {
@@ -38,6 +39,9 @@ class _QuizHostScreenState extends State<QuizHostScreen> {
 
   // 当前选中的预设模式
   QuizPresetMode? _selectedPreset = QuizPresetMode.standard;
+
+  // 游戏模式
+  GameMode _selectedGameMode = GameMode.fast;
 
   // 导航标志
   bool _isNavigatingToGame = false;
@@ -75,6 +79,7 @@ class _QuizHostScreenState extends State<QuizHostScreen> {
         singleChoiceCount: _singleChoiceCount,
         multipleChoiceCount: _multipleChoiceCount,
       ),
+      gameMode: _selectedGameMode,
     );
 
     // 添加房主作为玩家
@@ -173,6 +178,13 @@ class _QuizHostScreenState extends State<QuizHostScreen> {
                 ),
                 const SizedBox(height: 16),
 
+                // 游戏模式选择
+                GameModeSelector(
+                  selectedMode: _selectedGameMode,
+                  onModeChanged: _handleGameModeChange,
+                ),
+                const SizedBox(height: 16),
+
                 // 玩家列表
                 Expanded(
                   child: PlayerListCard(
@@ -238,6 +250,16 @@ class _QuizHostScreenState extends State<QuizHostScreen> {
     );
 
     _hostService.gameController.updateQuestions(newQuestions);
+  }
+
+  /// 处理游戏模式变化
+  void _handleGameModeChange(GameMode mode) {
+    setState(() {
+      _selectedGameMode = mode;
+    });
+    if (_isInitialized) {
+      _hostService.gameController.updateGameMode(mode);
+    }
   }
 
   /// 开始游戏

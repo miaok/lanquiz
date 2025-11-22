@@ -10,6 +10,12 @@ enum RoomStatus {
   finished, // 游戏结束
 }
 
+/// 游戏模式
+enum GameMode {
+  fast, // 快速模式：答完即走，不管对错
+  force, // 强制模式：必须答对才能下一题
+}
+
 /// 知识竞答房间模型
 class QuizRoom {
   final String id;
@@ -22,6 +28,7 @@ class QuizRoom {
   RoomStatus status;
   DateTime? questionStartTime;
   DateTime? gameEndTime; // 游戏结束时间
+  final GameMode gameMode; // 游戏模式
 
   QuizRoom({
     required this.id,
@@ -34,6 +41,7 @@ class QuizRoom {
     this.status = RoomStatus.waiting,
     this.questionStartTime,
     this.gameEndTime,
+    this.gameMode = GameMode.fast,
   }) : players = players ?? [],
        questions = questions ?? [];
 
@@ -62,6 +70,7 @@ class QuizRoom {
     'status': status.name,
     'questionStartTime': questionStartTime?.toIso8601String(),
     'gameEndTime': gameEndTime?.toIso8601String(),
+    'gameMode': gameMode.name,
   };
 
   factory QuizRoom.fromJson(Map<String, dynamic> json) => QuizRoom(
@@ -90,6 +99,10 @@ class QuizRoom {
     gameEndTime: json['gameEndTime'] != null
         ? DateTime.parse(json['gameEndTime'])
         : null,
+    gameMode: GameMode.values.firstWhere(
+      (e) => e.name == json['gameMode'],
+      orElse: () => GameMode.fast,
+    ),
   );
 
   QuizRoom copyWith({
@@ -103,6 +116,7 @@ class QuizRoom {
     RoomStatus? status,
     DateTime? questionStartTime,
     DateTime? gameEndTime,
+    GameMode? gameMode,
   }) {
     return QuizRoom(
       id: id ?? this.id,
@@ -115,6 +129,7 @@ class QuizRoom {
       status: status ?? this.status,
       questionStartTime: questionStartTime ?? this.questionStartTime,
       gameEndTime: gameEndTime ?? this.gameEndTime,
+      gameMode: gameMode ?? this.gameMode,
     );
   }
 }

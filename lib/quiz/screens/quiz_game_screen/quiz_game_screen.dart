@@ -34,7 +34,7 @@ class QuizGameScreen extends ConsumerStatefulWidget {
 }
 
 class _QuizGameScreenState extends ConsumerState<QuizGameScreen>
-    with GameListenersMixin, AnswerHandlerMixin {
+    with GameListenersMixin, AnswerHandlerMixin, AutomaticKeepAliveClientMixin {
   // Mixin 接口实现
   @override
   QuizHostService? get hostService => widget.hostService;
@@ -107,7 +107,11 @@ class _QuizGameScreenState extends ConsumerState<QuizGameScreen>
   }
 
   @override
+  bool get wantKeepAlive => true;
+
+  @override
   Widget build(BuildContext context) {
+    super.build(context);
     // 从Provider读取状态
     final gameState = ref.watch(quizGameProvider);
     final room = gameState.room;

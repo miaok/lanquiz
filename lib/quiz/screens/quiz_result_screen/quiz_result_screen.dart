@@ -11,6 +11,7 @@ import '../quiz_client_screen/quiz_client_screen.dart';
 import 'widgets/winners_section.dart';
 import 'widgets/rank_list_item.dart';
 import 'widgets/result_action_buttons.dart';
+import '../../utils/app_logger.dart';
 
 /// 结果页面
 class QuizResultScreen extends StatefulWidget {
@@ -105,7 +106,7 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
       _hasRecordSaved = true;
       debugPrint('游戏记录已保存: ${myPlayer.name}(我) vs ${opponentPlayer.name}');
     } catch (e) {
-      debugPrint('保存游戏记录失败: $e');
+      appLogger.e('保存游戏记录失败', e);
     }
   }
 
@@ -184,6 +185,7 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
       );
       return myPlayer.name;
     } catch (e) {
+      appLogger.w('Error finding player name', e);
       return 'Player';
     }
   }

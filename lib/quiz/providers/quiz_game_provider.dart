@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/quiz_room_model.dart';
 import '../models/question_model.dart';
+import '../models/player_model.dart';
 
 /// 游戏状态
 class QuizGameState {
@@ -77,15 +78,15 @@ class QuizGameNotifier extends StateNotifier<QuizGameState> {
   QuizGameNotifier() : super(const QuizGameState());
 
   /// 更新房间状态
-  void updateRoom(QuizRoom room, {int? playerQuestionIndex}) {
+  void updateRoom(QuizRoom room, {required QuizPlayer myPlayer}) {
     state = state.copyWith(room: room);
-    _updateQuestionState(room, playerQuestionIndex);
+    _updateQuestionState(room, myPlayer);
   }
 
   /// 更新题目状态(处理乱序)
-  void _updateQuestionState(QuizRoom room, int? playerQuestionIndex) {
-    // 使用玩家的题目索引(独立进度模式)或房间的题目索引
-    final newIndex = playerQuestionIndex ?? room.currentQuestionIndex;
+  void _updateQuestionState(QuizRoom room, QuizPlayer myPlayer) {
+    // 使用玩家的题目索引(独立进度模式)
+    final newIndex = myPlayer.currentQuestionIndex;
 
     // 如果题目索引变化,重新生成乱序索引并清空选择
     if (newIndex != state.currentQuestionIndex) {
@@ -104,6 +105,20 @@ class QuizGameNotifier extends StateNotifier<QuizGameState> {
         hasSubmittedAnswer: false,
         submittedAnswerCorrect: false,
       );
+    } else {
+      // 题目索引未变，检查是否是强制模式下的重试
+      // 如果上一题答错且当前答案已被重置（为null），说明需要重试
+      if (room.gameMode == GameMode.force &&
+          myPlayer.lastAnswerResult == AnswerResult.incorrect &&
+          myPlayer.currentAnswer == null) {
+        state = state.copyWith(
+          hasSubmittedAnswer: false,
+          submittedAnswerCorrect: false,
+          showFeedback: false,
+          clearSelectedAnswer: true, // 清除之前的错误选择
+          selectedAnswers: const [],
+        );
+      }
     }
   }
 

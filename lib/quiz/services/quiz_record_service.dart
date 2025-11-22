@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/app_logger.dart';
 import '../models/game_record_model.dart';
 
 /// 游戏记录存储服务
@@ -40,6 +41,7 @@ class GameRecordService {
           .map((json) => GameRecord.fromJson(json as Map<String, dynamic>))
           .toList();
     } catch (e) {
+      appLogger.e('Failed to parse game records', e);
       // 解析失败，返回空列表
       return [];
     }

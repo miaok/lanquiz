@@ -70,6 +70,7 @@ class QuizHostService with NetworkResourceManager {
 
       return true;
     } catch (e) {
+      appLogger.e('Host initialization failed', e);
       await _cleanupResources();
       return false;
     }
@@ -86,6 +87,7 @@ class QuizHostService with NetworkResourceManager {
 
       _server!.listen(_handleNewClient, cancelOnError: false);
     } catch (e) {
+      appLogger.w('First TCP bind attempt failed, retrying...', e);
       // 尝试强制清理后重试一次
       await Future.delayed(const Duration(milliseconds: 500));
       await _cleanupResources();
@@ -107,6 +109,7 @@ class QuizHostService with NetworkResourceManager {
       _udp!.broadcastEnabled = true;
       _startBeacon();
     } catch (e) {
+      appLogger.w('UDP broadcast bind failed', e);
       // UDP失败不影响主要功能
     }
   }
@@ -293,6 +296,7 @@ class QuizHostService with NetworkResourceManager {
     try {
       gameController.dispose();
     } catch (e) {
+      appLogger.w('Error disposing game controller', e);
       // 静默失败
     }
 

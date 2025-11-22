@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import '../utils/app_logger.dart';
 
 /// 网络消息类型
 enum MessageType {
@@ -67,6 +68,7 @@ class QuizNetworkService {
       }
       return false;
     } catch (e) {
+      appLogger.w('Error checking WiFi connection', e);
       return false;
     }
   }
@@ -117,6 +119,7 @@ class QuizNetworkService {
       // 如果没有找到WiFi接口，返回null表示未连接WiFi
       return null;
     } catch (e) {
+      appLogger.w('Error getting local IPv4', e);
       return null;
     }
   }
@@ -144,6 +147,7 @@ class QuizNetworkService {
       try {
         sendMessage(client, message);
       } catch (e) {
+        appLogger.w('Failed to send message to client', e);
         // 忽略单个客户端发送失败
       }
     }

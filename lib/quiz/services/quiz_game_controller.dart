@@ -108,10 +108,6 @@ class QuizGameController {
       answerResult = AnswerResult.incorrect;
     }
 
-    // 判断是否是最后一题
-    final isLastQuestion =
-        player.currentQuestionIndex >= room.questions.length - 1;
-
     // 记录错题
     List<Map<String, dynamic>> updatedWrongAnswers = List.from(
       player.wrongAnswers,
@@ -128,6 +124,81 @@ class QuizGameController {
         'playerAnswer': answerIndex,
         'correctAnswer': correctAnswerValue,
       });
+    }
+
+    // 判断是否是最后一题
+    final isLastQuestion =
+        player.currentQuestionIndex >= room.questions.length - 1;
+
+    // 强制模式逻辑：答错不跳转下一题
+    if (room.gameMode == GameMode.force && !isCorrect) {
+      final updatedPlayers = List<QuizPlayer>.from(room.players);
+      updatedPlayers[index] = player.copyWith(
+        currentAnswer: null, // 重置答案
+        forceNullCurrentAnswer: true,
+        // 关键：不更新 answerTime，这样最终答对时计算的时间才是这道题的总耗时
+        answerTime: player.answerTime,
+        score: newScore,
+        comboCount: 0,
+        lastAnswerResult: AnswerResult.incorrect,
+        wrongAnswers: updatedWrongAnswers,
+        currentQuestionIndex: player.currentQuestionIndex, // 保持在当前题目
+        isFinished: false,
+      );
+      room = room.copyWith(players: updatedPlayers);
+      _notifyUpdate();
+      return;
+    }
+
+    if (isCorrect) {
+      if (room.gameMode == GameMode.force) {
+        // 强制模式计分算法
+        // 1. 计算本题耗时 (秒)
+        final currentTimestamp = DateTime.now()
+            .difference(room.questionStartTime!)
+            .inMilliseconds;
+        final lastTimestamp = player.answerTime;
+        final durationSeconds = (currentTimestamp - lastTimestamp) / 1000;
+
+        // 2. 计算错误次数
+        final wrongCount = player.wrongAnswers
+            .where((w) => w['questionId'] == question.id)
+            .length;
+
+        // 3. 计算得分
+        // 基础分 100
+        // 时间惩罚: 每秒 0.5 分
+        // 错题惩罚: 每次 15 分
+        const double baseScore = 100.0;
+        const double timePenalty = 0.5;
+        const double wrongPenalty = 15.0;
+
+        double score =
+            baseScore -
+            (durationSeconds * timePenalty) -
+            (wrongCount * wrongPenalty);
+
+        // 保底 10 分
+        final finalScore = score.round().clamp(10, 100);
+
+        newScore = player.score + finalScore;
+        newComboCount = player.comboCount + 1;
+        answerResult = AnswerResult.correct;
+
+        appLogger.d(
+          'Force Mode Score: Base=$baseScore, Time=${durationSeconds}s(-${(durationSeconds * timePenalty).toStringAsFixed(1)}), Wrong=$wrongCount(-${wrongCount * wrongPenalty}) -> Final=$finalScore',
+        );
+      } else {
+        // 快速模式计分
+        final baseScore = (100 / room.questions.length).round(); // 每题默认分数
+        final totalScore = baseScore;
+        newScore = player.score + totalScore;
+        newComboCount = player.comboCount + 1; // 连击数+1
+        answerResult = AnswerResult.correct;
+      }
+    } else {
+      newComboCount = 0; // 答错重置连击数
+      answerResult = AnswerResult.incorrect;
     }
 
     final updatedPlayers = List<QuizPlayer>.from(room.players);
@@ -167,6 +238,14 @@ class QuizGameController {
     if (newQuestions.isEmpty) return false;
 
     room = room.copyWith(questions: newQuestions);
+    _notifyUpdate();
+    return true;
+  }
+
+  /// 更新游戏模式
+  bool updateGameMode(GameMode mode) {
+    if (room.status != RoomStatus.waiting) return false;
+    room = room.copyWith(gameMode: mode);
     _notifyUpdate();
     return true;
   }

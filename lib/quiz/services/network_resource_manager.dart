@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import '../utils/app_logger.dart';
 
 /// 网络资源管理 Mixin
 /// 提供统一的资源清理逻辑
@@ -10,7 +11,7 @@ mixin NetworkResourceManager {
       try {
         await controller.close();
       } catch (e) {
-        // 静默失败
+        appLogger.w('关闭 StreamController 失败', e);
       }
     }
   }
@@ -23,7 +24,7 @@ mixin NetworkResourceManager {
         // 等待连接完全关闭
         await Future.delayed(const Duration(milliseconds: 100));
       } catch (e) {
-        // 静默失败
+        appLogger.w('关闭 Socket 失败', e);
       }
     }
   }
@@ -36,7 +37,7 @@ mixin NetworkResourceManager {
         // 等待端口释放
         await Future.delayed(const Duration(milliseconds: 100));
       } catch (e) {
-        // 静默失败
+        appLogger.w('关闭 ServerSocket 失败', e);
       }
     }
   }
@@ -46,7 +47,7 @@ mixin NetworkResourceManager {
     try {
       udp?.close();
     } catch (e) {
-      // 静默失败
+      appLogger.w('关闭 RawDatagramSocket 失败', e);
     }
   }
 
@@ -61,7 +62,7 @@ mixin NetworkResourceManager {
       try {
         await subscription.cancel();
       } catch (e) {
-        // 静默失败
+        appLogger.w('取消 StreamSubscription 失败', e);
       }
     }
   }

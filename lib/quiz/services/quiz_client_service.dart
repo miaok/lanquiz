@@ -32,6 +32,7 @@ class QuizClientService with NetworkResourceManager {
     try {
       return _tcp?.remoteAddress.address;
     } catch (e) {
+      appLogger.d('Error getting host IP', e);
       return null;
     }
   }
@@ -87,6 +88,7 @@ class QuizClientService with NetworkResourceManager {
       _updateStatus('已连接');
       return true;
     } catch (e) {
+      appLogger.e('Discovery and connection failed', e);
       _updateStatus(_networkService.getFriendlyErrorMessage(e));
       await _cleanupConnection();
       return false;
@@ -114,6 +116,7 @@ class QuizClientService with NetworkResourceManager {
         _tcp!.setOption(SocketOption.tcpNoDelay, true);
         break;
       } catch (e) {
+        appLogger.w('Connection attempt $retryCount failed', e);
         retryCount++;
 
         if (retryCount >= maxRetries) {
@@ -165,6 +168,7 @@ class QuizClientService with NetworkResourceManager {
             ),
           );
         } catch (e) {
+          appLogger.d('Heartbeat send failed', e);
           // 心跳发送失败通常意味着连接问题，会在socket error中处理
         }
       }
@@ -236,6 +240,7 @@ class QuizClientService with NetworkResourceManager {
         // 可以在这里请求一次最新的房间状态，虽然Host在重连时会发送
         return;
       } catch (e) {
+        appLogger.w('Reconnect attempt failed', e);
         // continue retry
       }
     }
@@ -328,6 +333,7 @@ class QuizClientService with NetworkResourceManager {
       );
       _networkService.sendMessage(_tcp!, message);
     } catch (e) {
+      appLogger.e('Failed to send player ready status', e);
       // 静默失败
     }
   }
@@ -345,6 +351,7 @@ class QuizClientService with NetworkResourceManager {
       );
       _networkService.sendMessage(_tcp!, message);
     } catch (e) {
+      appLogger.e('Failed to submit answer', e);
       // 静默失败
     }
   }

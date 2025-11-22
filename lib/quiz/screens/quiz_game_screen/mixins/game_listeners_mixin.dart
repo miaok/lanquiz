@@ -36,10 +36,7 @@ mixin GameListenersMixin<T extends ConsumerStatefulWidget> on ConsumerState<T> {
         );
         ref
             .read(quizGameProvider.notifier)
-            .updateRoom(
-              initialRoom,
-              playerQuestionIndex: hostPlayer.currentQuestionIndex,
-            );
+            .updateRoom(initialRoom, myPlayer: hostPlayer);
       }
     });
 
@@ -54,10 +51,7 @@ mixin GameListenersMixin<T extends ConsumerStatefulWidget> on ConsumerState<T> {
         // 更新Provider状态，传入玩家的题目索引
         ref
             .read(quizGameProvider.notifier)
-            .updateRoom(
-              room,
-              playerQuestionIndex: hostPlayer.currentQuestionIndex,
-            );
+            .updateRoom(room, myPlayer: hostPlayer);
 
         // 检查是否需要导航到结果页
         final gameState = ref.read(quizGameProvider);
@@ -96,10 +90,7 @@ mixin GameListenersMixin<T extends ConsumerStatefulWidget> on ConsumerState<T> {
           );
           ref
               .read(quizGameProvider.notifier)
-              .updateRoom(
-                initialRoom,
-                playerQuestionIndex: myPlayer.currentQuestionIndex,
-              );
+              .updateRoom(initialRoom, myPlayer: myPlayer);
         }
       });
     }
@@ -116,10 +107,7 @@ mixin GameListenersMixin<T extends ConsumerStatefulWidget> on ConsumerState<T> {
         // 更新Provider状态，传入玩家的题目索引
         ref
             .read(quizGameProvider.notifier)
-            .updateRoom(
-              room,
-              playerQuestionIndex: myPlayer.currentQuestionIndex,
-            );
+            .updateRoom(room, myPlayer: myPlayer);
 
         final gameState = ref.read(quizGameProvider);
         if (room.status == RoomStatus.finished &&
