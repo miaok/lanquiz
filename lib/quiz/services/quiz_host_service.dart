@@ -6,9 +6,10 @@ import '../models/player.dart';
 import '../data/question_repository.dart';
 import 'quiz_network_service.dart';
 import 'quiz_game_controller.dart';
+import 'network_resource_manager.dart';
 
 /// 主机端服务（房主）
-class QuizHostService {
+class QuizHostService with NetworkResourceManager {
   final QuizNetworkService _networkService = QuizNetworkService.instance;
   late QuizGameController gameController;
 
@@ -45,116 +46,86 @@ class QuizHostService {
       gameController = QuizGameController(room);
 
       // 检查WiFi连接
-      final isWiFi = await _networkService.isWiFiConnected();
-      if (!isWiFi) {
-        return false; // 未连接WiFi，返回失败
+      if (!await _networkService.isWiFiConnected()) {
+        return false;
       }
 
       // 获取本地WiFi IP
       _hostIp = await _networkService.getLocalIPv4();
       if (_hostIp == null) {
-        return false; // 无法获取WiFi IP，返回失败
+        return false;
       }
-      // print('尝试在 $_hostIp:${QuizNetworkService.tcpPort} 启动主机...');
 
-      // 绑定TCP服务器,启用端口重用
-      try {
-        _server = await ServerSocket.bind(
-          InternetAddress.anyIPv4,
-          QuizNetworkService.tcpPort,
-          shared: true, // 允许端口重用
-        );
-
-        // 设置服务器选项
-        _server!.listen(
-          _handleNewClient,
-          // onError: (error) {
-          //   print('服务器监听错误: $error');
-          // },
-          cancelOnError: false,
-        );
-
-        // print('TCP服务器已启动,端口: ${QuizNetworkService.tcpPort}');
-      } catch (e) {
-        // print('绑定TCP端口失败: $e');
-        // 尝试强制清理后重试一次
-        await Future.delayed(const Duration(milliseconds: 500));
-        await _cleanupResources();
-        await Future.delayed(const Duration(milliseconds: 500));
-
-        _server = await ServerSocket.bind(
-          InternetAddress.anyIPv4,
-          QuizNetworkService.tcpPort,
-          shared: true,
-        );
-        _server!.listen(_handleNewClient, cancelOnError: false);
-        // print('TCP服务器重试成功');
-      }
+      // 绑定TCP服务器
+      await _bindTcpServer();
 
       // 启动UDP广播
-      try {
-        _udp = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
-        _udp!.broadcastEnabled = true;
-        _startBeacon();
-        // print('UDP广播已启动');
-      } catch (e) {
-        // print('启动UDP广播失败: $e');
-        // UDP失败不影响主要功能,继续运行
-      }
+      await _startUdpBroadcast();
 
       // 监听房间更新
       gameController.roomUpdates.listen((room) {
         _broadcastRoomUpdate();
       });
 
-      // print('主机已成功启动,IP: $_hostIp');
       return true;
     } catch (e) {
-      // print('初始化主机失败: $e');
-      // print('堆栈跟踪: $stackTrace');
-      // 确保清理资源
       await _cleanupResources();
       return false;
     }
   }
 
+  /// 绑定TCP服务器
+  Future<void> _bindTcpServer() async {
+    try {
+      _server = await ServerSocket.bind(
+        InternetAddress.anyIPv4,
+        QuizNetworkService.tcpPort,
+        shared: true,
+      );
+
+      _server!.listen(_handleNewClient, cancelOnError: false);
+    } catch (e) {
+      // 尝试强制清理后重试一次
+      await Future.delayed(const Duration(milliseconds: 500));
+      await _cleanupResources();
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      _server = await ServerSocket.bind(
+        InternetAddress.anyIPv4,
+        QuizNetworkService.tcpPort,
+        shared: true,
+      );
+      _server!.listen(_handleNewClient, cancelOnError: false);
+    }
+  }
+
+  /// 启动UDP广播
+  Future<void> _startUdpBroadcast() async {
+    try {
+      _udp = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
+      _udp!.broadcastEnabled = true;
+      _startBeacon();
+    } catch (e) {
+      // UDP失败不影响主要功能
+    }
+  }
+
   /// 清理资源(内部方法,不关闭gameController)
   Future<void> _cleanupResources() async {
-    //print('清理网络资源...');
-
     // 停止UDP广播
-    _beacon?.cancel();
+    cancelTimer(_beacon);
     _beacon = null;
 
-    try {
-      _udp?.close();
-      _udp = null;
-    } catch (e) {
-      //print('关闭UDP失败: $e');
-    }
+    closeDatagramSocket(_udp);
+    _udp = null;
 
     // 关闭所有客户端连接
-    for (final client in _clients.toList()) {
-      try {
-        client.destroy();
-      } catch (e) {
-        //print('关闭客户端连接失败: $e');
-      }
-    }
-    _clients.clear();
+    await closeSockets(_clients);
     _clientPlayerIds.clear();
 
     // 关闭服务器
-    try {
-      await _server?.close();
-      _server = null;
-      // 等待端口释放
-      await Future.delayed(const Duration(milliseconds: 100));
-    } catch (e) {
-      //print('关闭服务器失败: $e');
-    }
-
-    //print('网络资源清理完成');
+    await closeServerSocket(_server);
+    _server = null;
   }
 
   /// 启动UDP广播信标
@@ -285,28 +256,17 @@ class QuizHostService {
 
   /// 关闭服务
   Future<void> dispose() async {
-    //print('主机服务正在关闭...');
-
-    // 关闭游戏控制器(停止发送更新)
+    // 关闭游戏控制器
     try {
       gameController.dispose();
     } catch (e) {
-      //print('关闭游戏控制器失败: $e');
+      // 静默失败
     }
 
     // 清理网络资源
     await _cleanupResources();
 
     // 关闭事件控制器
-    if (_clientDisconnectController != null &&
-        !_clientDisconnectController!.isClosed) {
-      try {
-        _clientDisconnectController!.close();
-      } catch (e) {
-        //print('关闭断连控制器失败: $e');
-      }
-    }
-
-    //print('主机服务已完全关闭');
+    await closeStreamController(_clientDisconnectController);
   }
 }

@@ -6,12 +6,12 @@ import '../models/player.dart';
 import '../services/quiz_host_service.dart';
 import '../services/quiz_client_service.dart';
 import 'quiz_result_screen.dart';
-import 'widgets/player_score_board.dart';
-import 'widgets/question_card.dart';
-import 'widgets/option_button.dart';
-import 'widgets/confirm_button.dart';
+import 'quiz_game_screen/widgets/player_score_board.dart';
+import 'quiz_game_screen/widgets/question_card.dart';
+import 'quiz_game_screen/widgets/option_button.dart';
+import 'quiz_game_screen/widgets/confirm_button.dart';
 import 'widgets/waiting_screen.dart';
-import 'widgets/answer_feedback_overlay.dart';
+import 'quiz_game_screen/widgets/answer_feedback_overlay.dart';
 
 /// 游戏页面
 class QuizGameScreen extends StatefulWidget {

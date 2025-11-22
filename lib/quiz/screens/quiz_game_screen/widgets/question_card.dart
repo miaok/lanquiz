@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../models/question.dart';
+import '../../../models/question.dart';
 
 /// 题目卡片组件
 class QuestionCard extends StatelessWidget {

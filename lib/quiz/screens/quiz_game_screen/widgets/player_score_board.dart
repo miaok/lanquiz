@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../models/quiz_room.dart';
-import '../../models/player.dart';
+import '../../../models/quiz_room.dart';
+import '../../../models/player.dart';
 
 /// 对抗式玩家得分榜组件
 class PlayerScoreBoard extends StatelessWidget {
