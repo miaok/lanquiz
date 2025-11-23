@@ -17,20 +17,7 @@ class GameModeSelector extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.sports_esports,
-                  size: 20,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(width: 8),
-                Text('游戏模式', style: Theme.of(context).textTheme.titleMedium),
-              ],
-            ),
-            const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
               child: SegmentedButton<GameMode>(
@@ -50,15 +37,6 @@ class GameModeSelector extends StatelessWidget {
                 onSelectionChanged: (Set<GameMode> newSelection) {
                   onModeChanged(newSelection.first);
                 },
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              selectedMode == GameMode.fast
-                  ? '答完即走，不管对错，追求速度'
-                  : '必须答对才能进入下一题，追求准确率',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
           ],

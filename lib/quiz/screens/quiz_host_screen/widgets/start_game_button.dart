@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../models/quiz_room_model.dart';
+import '../../../utils/haptic_feedback.dart';
 
 /// 开始游戏按钮组件
 class StartGameButton extends StatelessWidget {
@@ -21,7 +22,12 @@ class StartGameButton extends StatelessWidget {
     return SizedBox(
       height: 56,
       child: FilledButton(
-        onPressed: canStart ? onStartGame : null,
+        onPressed: canStart
+            ? () {
+                HapticFeedback.heavy();
+                onStartGame();
+              }
+            : null,
         child: Text(
           canStart
               ? '开始游戏'

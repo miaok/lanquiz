@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../utils/haptic_feedback.dart';
 
 /// 多选题确认按钮组件
 class ConfirmButton extends StatelessWidget {
@@ -19,7 +20,12 @@ class ConfirmButton extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return FilledButton(
-      onPressed: selectedCount == 0 ? null : onConfirm,
+      onPressed: selectedCount == 0
+          ? null
+          : () {
+              HapticFeedback.medium();
+              onConfirm?.call();
+            },
       style: FilledButton.styleFrom(
         backgroundColor: colorScheme.tertiary,
         disabledBackgroundColor: colorScheme.surfaceContainerHighest,

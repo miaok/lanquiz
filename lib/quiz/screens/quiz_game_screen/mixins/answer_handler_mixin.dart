@@ -4,6 +4,7 @@ import '../../../models/question_model.dart';
 import '../../../providers/quiz_game_provider.dart';
 import '../../../services/quiz_host_service.dart';
 import '../../../services/quiz_client_service.dart';
+import '../../../utils/haptic_feedback.dart';
 
 /// 答题逻辑 Mixin
 /// 负责处理单选、多选题的答题逻辑
@@ -24,6 +25,9 @@ mixin AnswerHandlerMixin<T extends ConsumerStatefulWidget> on ConsumerState<T> {
     // 获取原始索引
     final originalIndex = gameState.shuffledIndices[displayIndex];
 
+    // 轻触震动反馈
+    HapticFeedback.light();
+
     // 更新Provider状态 - 显示选中效果
     ref.read(quizGameProvider.notifier).selectSingleAnswer(displayIndex);
 
@@ -39,6 +43,13 @@ mixin AnswerHandlerMixin<T extends ConsumerStatefulWidget> on ConsumerState<T> {
 
       // 显示反馈(在按钮上显示)
       ref.read(quizGameProvider.notifier).showFeedback(isCorrect);
+
+      // 震动反馈
+      if (isCorrect) {
+        HapticFeedback.success();
+      } else {
+        HapticFeedback.error();
+      }
 
       // 延迟后提交答案并隐藏反馈
       feedbackTimer = Timer(const Duration(milliseconds: 800), () {
@@ -61,6 +72,9 @@ mixin AnswerHandlerMixin<T extends ConsumerStatefulWidget> on ConsumerState<T> {
   void toggleMultipleChoice(int displayIndex) {
     final gameState = ref.read(quizGameProvider);
     if (gameState.showFeedback) return;
+
+    // 轻触震动反馈
+    HapticFeedback.light();
 
     ref.read(quizGameProvider.notifier).toggleMultipleChoice(displayIndex);
   }
@@ -89,6 +103,13 @@ mixin AnswerHandlerMixin<T extends ConsumerStatefulWidget> on ConsumerState<T> {
 
       // 显示反馈(在按钮上显示)
       ref.read(quizGameProvider.notifier).showFeedback(isCorrect);
+
+      // 震动反馈
+      if (isCorrect) {
+        HapticFeedback.success();
+      } else {
+        HapticFeedback.error();
+      }
 
       // 延迟后提交答案并隐藏反馈
       feedbackTimer = Timer(const Duration(milliseconds: 800), () {

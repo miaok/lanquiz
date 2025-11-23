@@ -189,12 +189,39 @@ class QuizGameController {
           'Force Mode Score: Base=$baseScore, Time=${durationSeconds}s(-${(durationSeconds * timePenalty).toStringAsFixed(1)}), Wrong=$wrongCount(-${wrongCount * wrongPenalty}) -> Final=$finalScore',
         );
       } else {
-        // 快速模式计分
+        // 快速模式计分算法
         final baseScore = (100 / room.questions.length).round(); // 每题默认分数
-        final totalScore = baseScore;
+
+        // 计算本题耗时 (秒)
+        final currentTimestamp = DateTime.now()
+            .difference(room.questionStartTime!)
+            .inMilliseconds;
+        final lastTimestamp = player.answerTime;
+        final durationSeconds = (currentTimestamp - lastTimestamp) / 1000;
+
+        // 时间奖励机制
+        // 标准时间: 10秒
+        // 如果答题时间 < 标准时间，给予时间奖励
+        // 时间奖励 = (标准时间 - 实际时间) × 奖励系数(1.0)
+        // 最高奖励上限为基础分的 50%
+        const double standardTime = 6.0;
+        const double bonusCoefficient = 1.0;
+        final maxBonus = baseScore * 0.5;
+
+        double timeBonus = 0.0;
+        if (durationSeconds < standardTime) {
+          timeBonus = (standardTime - durationSeconds) * bonusCoefficient;
+          timeBonus = timeBonus.clamp(0, maxBonus);
+        }
+
+        final totalScore = (baseScore + timeBonus).round();
         newScore = player.score + totalScore;
         newComboCount = player.comboCount + 1; // 连击数+1
         answerResult = AnswerResult.correct;
+
+        appLogger.d(
+          'Fast Mode Score: Base=$baseScore, Time=${durationSeconds.toStringAsFixed(1)}s(+${timeBonus.toStringAsFixed(1)}) -> Total=$totalScore',
+        );
       }
     } else {
       newComboCount = 0; // 答错重置连击数
@@ -251,10 +278,26 @@ class QuizGameController {
   }
 
   /// 重新开始游戏
-  void restartGame([List<Question>? newQuestions]) {
+  /// [newQuestions] 新的题目列表
+  /// [keepPlayerIds] 要保留的玩家ID列表（如果为null则保留所有玩家）
+  void restartGame([List<Question>? newQuestions, Set<String>? keepPlayerIds]) {
+    appLogger.i('重新开始游戏 - 当前玩家数: ${room.players.length}');
+    if (keepPlayerIds != null) {
+      appLogger.i('要保留的玩家ID: $keepPlayerIds');
+    }
+
     List<QuizPlayer> updatedPlayers = [];
+
     for (int i = 0; i < room.players.length; i++) {
       final player = room.players[i];
+
+      // 如果指定了要保留的玩家ID列表，则只保留这些玩家
+      if (keepPlayerIds != null && !keepPlayerIds.contains(player.id)) {
+        appLogger.i('移除已断开连接的玩家: ${player.name} (${player.id})');
+        continue;
+      }
+
+      appLogger.d('保留玩家: ${player.name} (${player.id})');
       updatedPlayers.add(
         player.copyWith(
           score: 0,
@@ -270,6 +313,8 @@ class QuizGameController {
         ),
       );
     }
+
+    appLogger.i('游戏重置完成 - 保留玩家数: ${updatedPlayers.length}');
 
     room = room.copyWith(
       status: RoomStatus.waiting,

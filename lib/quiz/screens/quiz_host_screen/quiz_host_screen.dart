@@ -176,14 +176,12 @@ class _QuizHostScreenState extends State<QuizHostScreen> {
                       _handleQuestionCountChange(multipleChoice: value),
                   onPresetChanged: _applyPresetMode,
                 ),
-                const SizedBox(height: 16),
 
                 // 游戏模式选择
                 GameModeSelector(
                   selectedMode: _selectedGameMode,
                   onModeChanged: _handleGameModeChange,
                 ),
-                const SizedBox(height: 16),
 
                 // 玩家列表
                 Expanded(

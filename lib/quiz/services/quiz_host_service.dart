@@ -286,7 +286,18 @@ class QuizHostService with NetworkResourceManager {
       singleChoiceCount: _singleChoiceCount,
       multipleChoiceCount: _multipleChoiceCount,
     );
-    gameController.restartGame(newQuestions);
+
+    // 构建要保留的玩家ID集合：房主 + 当前连接的客户端
+    final keepPlayerIds = <String>{'host'}; // 始终保留房主
+
+    // 添加所有当前连接的客户端玩家ID
+    for (final playerId in _clientPlayerIds.values) {
+      keepPlayerIds.add(playerId);
+    }
+
+    appLogger.i('重新开始游戏，保留的玩家: $keepPlayerIds');
+
+    gameController.restartGame(newQuestions, keepPlayerIds);
     appLogger.i('游戏已重置，新题目已生成');
   }
 
