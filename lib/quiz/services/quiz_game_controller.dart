@@ -92,15 +92,14 @@ class QuizGameController {
     // 使用题目的判题方法
     final isCorrect = question.isAnswerCorrect(answerObject);
 
-    // 立即计算分数
+    // 简化的计分规则：答对得分，答错不得分
     int newScore = player.score;
     int newComboCount = player.comboCount;
     AnswerResult answerResult;
 
     if (isCorrect) {
-      final baseScore = (100 / room.questions.length).round(); // 每题默认分数
-      final totalScore = baseScore; // 取消时间奖励
-      newScore = player.score + totalScore;
+      final baseScore = (100 / room.questions.length).round(); // 每题平均分数
+      newScore = player.score + baseScore;
       newComboCount = player.comboCount + 1; // 连击数+1
       answerResult = AnswerResult.correct;
     } else {
@@ -150,83 +149,8 @@ class QuizGameController {
       return;
     }
 
-    if (isCorrect) {
-      if (room.gameMode == GameMode.force) {
-        // 强制模式计分算法
-        // 1. 计算本题耗时 (秒)
-        final currentTimestamp = DateTime.now()
-            .difference(room.questionStartTime!)
-            .inMilliseconds;
-        final lastTimestamp = player.answerTime;
-        final durationSeconds = (currentTimestamp - lastTimestamp) / 1000;
-
-        // 2. 计算错误次数
-        final wrongCount = player.wrongAnswers
-            .where((w) => w['questionId'] == question.id)
-            .length;
-
-        // 3. 计算得分
-        // 基础分 100
-        // 时间惩罚: 每秒 0.5 分
-        // 错题惩罚: 每次 15 分
-        const double baseScore = 100.0;
-        const double timePenalty = 0.5;
-        const double wrongPenalty = 15.0;
-
-        double score =
-            baseScore -
-            (durationSeconds * timePenalty) -
-            (wrongCount * wrongPenalty);
-
-        // 保底 10 分
-        final finalScore = score.round().clamp(10, 100);
-
-        newScore = player.score + finalScore;
-        newComboCount = player.comboCount + 1;
-        answerResult = AnswerResult.correct;
-
-        appLogger.d(
-          'Force Mode Score: Base=$baseScore, Time=${durationSeconds}s(-${(durationSeconds * timePenalty).toStringAsFixed(1)}), Wrong=$wrongCount(-${wrongCount * wrongPenalty}) -> Final=$finalScore',
-        );
-      } else {
-        // 快速模式计分算法
-        final baseScore = (100 / room.questions.length).round(); // 每题默认分数
-
-        // 计算本题耗时 (秒)
-        final currentTimestamp = DateTime.now()
-            .difference(room.questionStartTime!)
-            .inMilliseconds;
-        final lastTimestamp = player.answerTime;
-        final durationSeconds = (currentTimestamp - lastTimestamp) / 1000;
-
-        // 时间奖励机制
-        // 标准时间: 10秒
-        // 如果答题时间 < 标准时间，给予时间奖励
-        // 时间奖励 = (标准时间 - 实际时间) × 奖励系数(1.0)
-        // 最高奖励上限为基础分的 50%
-        const double standardTime = 6.0;
-        const double bonusCoefficient = 1.0;
-        final maxBonus = baseScore * 0.5;
-
-        double timeBonus = 0.0;
-        if (durationSeconds < standardTime) {
-          timeBonus = (standardTime - durationSeconds) * bonusCoefficient;
-          timeBonus = timeBonus.clamp(0, maxBonus);
-        }
-
-        final totalScore = (baseScore + timeBonus).round();
-        newScore = player.score + totalScore;
-        newComboCount = player.comboCount + 1; // 连击数+1
-        answerResult = AnswerResult.correct;
-
-        appLogger.d(
-          'Fast Mode Score: Base=$baseScore, Time=${durationSeconds.toStringAsFixed(1)}s(+${timeBonus.toStringAsFixed(1)}) -> Total=$totalScore',
-        );
-      }
-    } else {
-      newComboCount = 0; // 答错重置连击数
-      answerResult = AnswerResult.incorrect;
-    }
+    // 简化的计分逻辑：答对得分，答错不得分
+    // 不再区分游戏模式，统一使用相同的计分规则
 
     final updatedPlayers = List<QuizPlayer>.from(room.players);
     updatedPlayers[index] = player.copyWith(
@@ -328,9 +252,42 @@ class QuizGameController {
   }
 
   /// 获取排行榜
+  /// 排序规则：
+  /// 快速模式:
+  ///   1. 分数高的排在前面
+  ///   2. 分数相同时，用时少的排在前面（answerTime越小越好）
+  /// 强制模式:
+  ///   1. 错题数少的排在前面
+  ///   2. 错题数相同时，用时少的排在前面
   List<QuizPlayer> getLeaderboard() {
     final sortedPlayers = List<QuizPlayer>.from(room.players);
-    sortedPlayers.sort((a, b) => b.score.compareTo(a.score));
+
+    if (room.gameMode == GameMode.force) {
+      // 强制模式：按错题数和用时排序
+      sortedPlayers.sort((a, b) {
+        // 首先按错题数升序排序（错题少的排前面）
+        final wrongCountComparison = a.wrongAnswers.length.compareTo(
+          b.wrongAnswers.length,
+        );
+        if (wrongCountComparison != 0) {
+          return wrongCountComparison;
+        }
+        // 错题数相同时，按用时升序排序（用时少的排前面）
+        return a.answerTime.compareTo(b.answerTime);
+      });
+    } else {
+      // 快速模式：按分数和用时排序
+      sortedPlayers.sort((a, b) {
+        // 首先按分数降序排序
+        final scoreComparison = b.score.compareTo(a.score);
+        if (scoreComparison != 0) {
+          return scoreComparison;
+        }
+        // 分数相同时，按用时升序排序（用时少的排前面）
+        return a.answerTime.compareTo(b.answerTime);
+      });
+    }
+
     return sortedPlayers;
   }
 

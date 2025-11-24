@@ -45,8 +45,8 @@ class HapticFeedback {
       if (await _hasVibrator()) {
         // 两次短震动，中间间隔50ms
         await Vibration.vibrate(
-          pattern: [0, 30, 50, 30],
-          intensities: [0, 128, 0, 128],
+          pattern: [0, 30, 30, 30],
+          intensities: [0, 108, 0, 108],
         );
       }
     } catch (e) {

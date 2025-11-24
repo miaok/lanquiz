@@ -84,47 +84,88 @@ class RankListItem extends StatelessWidget {
     );
   }
 
-  /// 构建尾部（分数和展开图标）
+  /// 构建尾部（分数、用时、错题数和展开图标）
   Widget _buildTrailing(
     ColorScheme colorScheme,
     Color rankColor,
     bool hasWrongAnswers,
   ) {
+    // 格式化用时
+    final timeInSeconds = (player.answerTime / 1000).round();
+    final minutes = timeInSeconds ~/ 60;
+    final seconds = timeInSeconds % 60;
+    final timeText = minutes > 0 ? '$minutes分$seconds秒' : '$seconds秒';
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color: rank <= 3 ? rankColor : colorScheme.primaryContainer,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: (rank <= 3 ? rankColor : colorScheme.primaryContainer)
-                    .withValues(alpha: 0.3),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
+        // 用时显示
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 分数
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+              decoration: BoxDecoration(
+                color: rank <= 3 ? rankColor : colorScheme.primaryContainer,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color:
+                        (rank <= 3 ? rankColor : colorScheme.primaryContainer)
+                            .withValues(alpha: 0.3),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-            ],
-          ),
-          child: Text(
-            '${player.score} 分',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: rank <= 3 ? Colors.white : colorScheme.primary,
+              child: Text(
+                '${player.score} 分',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: rank <= 3 ? Colors.white : colorScheme.primary,
+                ),
+              ),
             ),
-          ),
+            const SizedBox(height: 2),
+            // 用时和错题数
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.timer_outlined,
+                  size: 12,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 2),
+                Text(
+                  timeText,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                if (hasWrongAnswers) ...[
+                  const SizedBox(width: 8),
+                  Icon(Icons.error_outline, size: 12, color: colorScheme.error),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${player.wrongAnswers.length}题',
+                    style: TextStyle(fontSize: 12, color: colorScheme.error),
+                  ),
+                ],
+              ],
+            ),
+          ],
         ),
         if (hasWrongAnswers) ...[
           const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              color: colorScheme.errorContainer,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(Icons.expand_more, color: colorScheme.error, size: 20),
+          Icon(
+            Icons.expand_more,
+            color: colorScheme.onSurfaceVariant,
+            size: 20,
           ),
         ],
       ],
@@ -134,7 +175,7 @@ class RankListItem extends StatelessWidget {
   /// 构建错题区域
   Widget _buildWrongAnswersSection(ColorScheme colorScheme) {
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      margin: const EdgeInsets.fromLTRB(18, 0, 18, 18),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerHighest,
@@ -158,7 +199,7 @@ class RankListItem extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           ...player.wrongAnswers.map((wrongAnswer) {
             final questionId = wrongAnswer['questionId'] as String;
             final question = room.questions.firstWhere(

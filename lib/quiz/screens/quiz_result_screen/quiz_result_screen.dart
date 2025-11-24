@@ -8,7 +8,6 @@ import '../../services/quiz_client_service.dart';
 import '../../services/quiz_record_service.dart';
 import '../quiz_host_screen/quiz_host_screen.dart';
 import '../quiz_client_screen/quiz_client_screen.dart';
-import 'widgets/winners_section.dart';
 import 'widgets/rank_list_item.dart';
 import 'widgets/result_action_buttons.dart';
 import '../../utils/app_logger.dart';
@@ -201,9 +200,25 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    // 按分数排序
-    final sortedPlayers = List<QuizPlayer>.from(widget.room.players);
-    sortedPlayers.sort((a, b) => b.score.compareTo(a.score));
+    // 使用游戏控制器的排序方法,根据游戏模式自动选择排序策略
+    final sortedPlayers =
+        widget.isHost && widget.hostService != null
+              ? widget.hostService!.gameController.getLeaderboard()
+              : List<QuizPlayer>.from(widget.room.players)
+          ..sort((a, b) {
+            // 客户端侧也需要相同的排序逻辑
+            if (widget.room.gameMode == GameMode.force) {
+              final wrongCountComparison = a.wrongAnswers.length.compareTo(
+                b.wrongAnswers.length,
+              );
+              if (wrongCountComparison != 0) return wrongCountComparison;
+              return a.answerTime.compareTo(b.answerTime);
+            } else {
+              final scoreComparison = b.score.compareTo(a.score);
+              if (scoreComparison != 0) return scoreComparison;
+              return a.answerTime.compareTo(b.answerTime);
+            }
+          });
 
     return Scaffold(
       appBar: AppBar(
@@ -215,17 +230,6 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 获奖者区域
-            if (sortedPlayers.isNotEmpty)
-              WinnersSection(players: sortedPlayers),
-
-            // 分隔线
-            Container(
-              height: 1,
-              color: colorScheme.outlineVariant,
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-            ),
-
             // 排行榜标题
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
@@ -234,17 +238,37 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
                   Icon(Icons.leaderboard, color: colorScheme.primary, size: 24),
                   const SizedBox(width: 8),
                   Text(
-                    '查看错题',
+                    '排行榜',
                     style: textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: colorScheme.primary,
+                    ),
+                  ),
+                  const Spacer(),
+                  // 显示游戏模式
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: colorScheme.secondaryContainer,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      widget.room.gameMode == GameMode.force ? '强制模式' : '快速模式',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: colorScheme.onSecondaryContainer,
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
 
-            // 排行榜
+            // 排行榜列表
             Expanded(
               child: ListView.builder(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
